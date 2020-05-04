@@ -5,8 +5,6 @@ library(xts)
 library(rugarch)
 library(tseries)
 library(anytime)
-
-usethis::create_project('E:/Textbook/4th Year/ISSC/Crime related')
 ```
 
 ## Load Data
