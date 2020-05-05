@@ -5,6 +5,7 @@ library(xts)
 library(rugarch)
 library(tseries)
 library(anytime)
+library(aTSA) # adf.test
 ```
 
 ## Load Data
@@ -16,14 +17,6 @@ head(boston)
 boston <- boston %>%
   mutate(date = substr(OCCURRED_ON_DATE, start = 1, stop = 10))
 
-
-# boston before 2015
-boston_2012 <- read.csv("boston before 2015.csv")
-head(boston_2012)
-
-# add date
-#boston_2012 <- boston_2012 %>%
-#  mutate(date = substr(OCCURRED_ON_DATE, start = 1, stop = 10))
 ```
 
 ## Non-plot exploration
@@ -56,19 +49,19 @@ boston %>%
   ggplot(aes(x=OFFENSE_DESCRIPTION)) +
   geom_bar()
 
-# investigate person per month
-investigate <- boston_monthly %>%
+# verbal dispute per month
+dispute <- boston_monthly %>%
   ungroup() %>%
   select(OFFENSE_DESCRIPTION, YEAR, MONTH, monthly_freq) %>%
-  filter(OFFENSE_DESCRIPTION == "SICK/INJURED/MEDICAL - PERSON")
+  filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE")
 
 # construct time
-dates <- seq(as.Date("2015-06-01"), length = nrow(investigate), by = "months")
-investigate$time <- dates
+dates <- seq(as.Date("2015-06-01"), length = nrow(dispute), by = "months")
+dispute$time <- dates
 
 # reorder and select only interested columns
 col_order <- c("time", "monthly_freq")
-investigate_ts <- investigate[, col_order] %>%
+dispute_ts <- dispute[, col_order] %>%
   # remove May 2020 due to incomplete info
   head(-1) %>%
   ts_ts() 
@@ -76,58 +69,63 @@ investigate_ts <- investigate[, col_order] %>%
 
 
 # plot time series of investigate
-ts_plot(investigate_ts, title="Number of SICK/INJURED/MEDICAL - PERSON cases per month in Boston")
+ts_plot(dispute_ts, title="Number of VERBAL DISPUTE cases per month in Boston")
 
 # stationary?
-adf.test(investigate_ts)
+adf.test(dispute_ts)
+# adf test result is stationary, no need for differentiating
 
 # try to detrend
-investigate_diff <- diff(investigate_ts)
-adf.test(investigate_diff)
-ts_plot(investigate_diff, title = "Change in the number of sick/injured person cases per month in Boston")
+dispute_diff <- diff(dispute_ts)
+adf.test(dispute_diff)
+ts_plot(dispute_diff, title = "Change in the number of VERBAL DISPUTE cases per month in Boston")
 
-investigate_xts <- investigate[, col_order] %>%
+dispute_xts <- dispute[, col_order] %>%
   # remove May 2020 due to incomplete info
   head(-1) %>%
   ts_xts() 
 
-plot.xts(investigate_xts)
+plot.xts(dispute_xts)
 
-# plot daily version of calling medical attention
-medical_daily <- boston_daily %>%
+# plot daily version of verbal dispute
+dispute_daily <- boston_daily %>%
   ungroup() %>%
-  filter(OFFENSE_DESCRIPTION == "SICK/INJURED/MEDICAL - PERSON") %>%
+  filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE") %>%
   select(date, daily_frequ)
 
-colnames(medical_daily)[1] <- 'time'
+colnames(dispute_daily)[1] <- 'time'
 
-medical_daily %>%
+dispute_daily %>%
   ts_xts() %>%
-  plot.xts(main = "number of calling medical attention per day in Boston")
+  plot.xts(main = "number of VERBAL DISPUTE per day in Boston")
 ```
 
 ```{r model building}
-medical_xts <- ts_xts(medical_daily)
-medical_diff_xts <- na.omit(diff(medical_xts))
-plot.xts(medical_diff_xts)
+
+# already stationary
+# no need to do first difference to obtain stationarity
+dispute_xts <- ts_xts(dispute_daily)
+# following two steps are unnecessary
+dispute_diff_xts <- na.omit(diff(dispute_xts))
+plot.xts(dispute_diff_xts)
 
 model_arma_garch <- ugarchspec(variance.model = list(model = 'sGARCH', garchOrder = c(1,1)),
                            mean.model = list(armaOrder = c(1,0), include.mean = TRUE),
                            distribution.model = 'norm')
-
-medical_var_fit <- ugarchfit(spec = model_arma_garch, data = medical_diff_xts)
-medical_var_fit@fit$coef
+# build model using original data since it is stationary already
+dispute_var_fit <- ugarchfit(spec = model_arma_garch, data = dispute_xts)
+dispute_var_fit@fit$coef
 
 # obtain in-sample forecast
-medical_forecast <- ugarchforecast(fit = medical_var_fit, n.ahead = 20)
+dispute_forecast <- ugarchforecast(fit = dispute_var_fit, n.ahead = 20)
 
 # plot fit
-dates1 <- index(medical_diff_xts)
-t1 <- start(medical_diff_xts)
-medical_fit_xts <- xts(medical_forecast@model$modeldata$sigma, 
+dates1 <- index(dispute_xts)
+t1 <- start(dispute_xts)
+dispute_fit_xts <- xts(dispute_forecast@model$modeldata$sigma, 
                       start = t1, order.by = anytime(dates1))
 
 # plot fitted volatility
-plot.xts(medical_fit_xts, grid.col = 'white',
+plot.xts(dispute_fit_xts, grid.col = 'white',
          col = 'darkblue', ylab = '')
 ```
