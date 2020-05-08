@@ -6,6 +6,8 @@ library(rugarch)
 library(tseries)
 library(anytime)
 library(aTSA) # adf.test
+library(COVID19)
+library(gamm4)
 ```
 
 ## Load Data
@@ -128,4 +130,91 @@ dispute_fit_xts <- xts(dispute_forecast@model$modeldata$sigma,
 # plot fitted volatility
 plot.xts(dispute_fit_xts, grid.col = 'white',
          col = 'darkblue', ylab = '')
+```
+
+## COVID 19 RELATED
+```{r covid 19 related exploration}
+# extract MA data from US data. level 3 is by cities but cannot find Boston.
+covid19_MA <- covid19("USA", level = 2) %>%
+  filter(state == "Massachusetts") %>%
+  # filter out days when confirmed is zero
+  filter(confirmed > 0)
+
+# calculate the difference per day
+covid19_MA_diff <- data.frame(diff(covid19_MA$confirmed))
+colnames(covid19_MA_diff)[1] = "confirmed"
+covid19_MA_diff$date = covid19_MA$date[2:length(covid19_MA$date)]
+
+# extract for tranforming into time series data
+ts_MA <- covid19_MA %>%
+  select(date, confirmed) %>%
+  ts_ts()
+
+# plot time series of MA infection
+ts_plot(ts_MA)
+# conduct ADF Test
+adf.test(ts_MA)
+# not stationary at all
+
+# try first log difference
+ts_diff_MA <- diff(ts_MA)
+ts_plot(ts_diff_MA)
+# still clearly not stationary
+# need de-trend
+
+# de-trend 
+# GAMM model from STA303 A3
+
+# time as integer
+covid19_MA_diff$timeInt = as.numeric(covid19_MA_diff$date)
+# make a copy to avoid perfect collinearity
+covid19_MA_diff$timeIid = covid19_MA_diff$timeInt
+
+# GAMM model
+gamMA <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
+	data=covid19_MA_diff, family=poisson(link='log'))
+
+lme4::VarCorr(gamMA$mer)
+# looks like random intercept is making little difference.
+# choose to not have random effect to preserve it for time series analysis
+
+# 50 too overfit. 15 looks decent
+gamMA1 <- gamm4::gamm4(confirmed ~  s(timeInt, k=15),  
+	data=covid19_MA_diff, family=poisson(link='log'))
+
+# compare (meaningless coefficients)
+knitr::kable(cbind(summary(gamMA$mer)$coef[,1:2], summary(gamMA1$mer)$coef[,1:2]), digits = 3)
+
+# plot fitted value
+toPredict = data.frame(time = seq(covid19_MA_diff$date[1], 
+                                          covid19_MA_diff$date[length(covid19_MA_diff$date)],
+                                  by = '1 day'))
+toPredict$timeInt = as.numeric(toPredict$time)
+
+# plot
+
+matplot(toPredict$time, 
+        exp(do.call(cbind, mgcv::predict.gam(gamMA1$gam, toPredict, se.fit=TRUE)) %*% 
+              Pmisc::ciMat()), 
+        col='black', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='count', ylim = c(0.5, 5000), xlim = as.Date(c(covid19_MA$date[1], covid19_MA$date[length(covid19_MA$date)])))
+
+forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamMA1$gam, toPredict, se.fit=TRUE))))
+                        
+                        
+# access residuals
+MA_res <- data.frame(covid19_MA_diff$confirmed - forecast$fit)
+
+# transform into time series
+MA_res$time = covid19_MA_diff$date
+colnames(MA_res)[1] = "residuals"
+
+col_order <- c("time", "residuals")
+MA_res <- MA_res[, col_order]
+
+MA_res_ts <- ts_ts(MA_res)
+
+ts_plot(MA_res_ts)
+# adf test
+adf.test(MA_res_ts)
+# Stationary process
 ```
