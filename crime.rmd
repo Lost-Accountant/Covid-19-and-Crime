@@ -440,4 +440,4 @@ ts_plot(MA_res_ts)
 adf.test(MA_res_ts)
 # Stationary process
 ```
->>>>>>> 0c661dd5e31e91573e5a29ae7adfd63a6c5d2001
+
