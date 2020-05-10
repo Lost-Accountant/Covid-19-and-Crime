@@ -8,6 +8,9 @@ library(anytime)
 library(aTSA) # adf.test
 library(COVID19)
 library(gamm4)
+library(MTS) # BEKK11
+library(rmgarch) # multivariate GARCH
+
 ```
 
 ## Load Data
@@ -82,10 +85,7 @@ dispute_diff <- diff(dispute_ts)
 adf.test(dispute_diff)
 ts_plot(dispute_diff, title = "Change in the number of VERBAL DISPUTE cases per month in Boston")
 
-dispute_xts <- dispute[, col_order] %>%
-  # remove May 2020 due to incomplete info
-  head(-1) %>%
-  ts_xts() 
+
 
 plot.xts(dispute_xts)
 
@@ -97,12 +97,18 @@ dispute_daily <- boston_daily %>%
 
 colnames(dispute_daily)[1] <- 'time'
 
-dispute_daily %>%
-  ts_xts() %>%
-  plot.xts(main = "number of VERBAL DISPUTE per day in Boston")
+dispute_xts <- ts_xts(dispute_daily)
+
+# plot daily dispute from 2020
+plot.xts(dispute_xts["2020-01-01/"], main = "number of VERBAL DISPUTE per day in Boston since 2020")
+
+# plot daily dispute during covid 19
+plot.xts(dispute_xts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")],
+         main = "number of VERBAL DISPUTE per day
+         in Boston during COVID 19")
 ```
 
-```{r model building}
+```{r model building on boston crime}
 
 # already stationary
 # no need to do first difference to obtain stationarity
@@ -148,7 +154,7 @@ covid19_MA_diff$date = covid19_MA$date[2:length(covid19_MA$date)]
 # extract for tranforming into time series data
 ts_MA <- covid19_MA %>%
   select(date, confirmed) %>%
-  ts_ts()
+  ts_xts()
 
 # plot time series of MA infection
 ts_plot(ts_MA)
@@ -211,11 +217,31 @@ colnames(MA_res)[1] = "residuals"
 col_order <- c("time", "residuals")
 MA_res <- MA_res[, col_order]
 
-MA_res_ts <- ts_ts(MA_res)
+MA_res_ts <- ts_xts(MA_res)
 
-ts_plot(MA_res_ts)
+plot.xts(MA_res_ts)
 # adf test
 adf.test(MA_res_ts)
 # Stationary process
+```
+
+
+## Multivariate Volatility
+```{r Dyanamic Conditional Correlation}
+# plot raw data
+# based on common range of time
+combined <- merge(dispute_xts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")],
+                  ts_MA[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")])
+plot.xts(combined)
+
+
+# plot first difference of both
+# based on common range of time
+combined_diff <- merge(dispute_diff_xts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")],
+                  MA_res_ts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")])
+plot.xts(combined_diff)
+
+# fit a BEKK GARCH model
+BEKK <- BEKK11(combined_diff)
 ```
 
