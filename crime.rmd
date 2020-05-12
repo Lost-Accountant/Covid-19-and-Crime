@@ -194,6 +194,15 @@ plot.xts(dispute_xts["2020-01-01/"], main = "number of VERBAL DISPUTE per day in
 plot.xts(dispute_xts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")],
          main = "number of VERBAL DISPUTE per day
          in Boston during COVID 19")
+
+# Year to Year comparison
+dispute_daily %>%
+  mutate(year = stringr::str_extract(time, "^.{4}"),
+         time_wo_year = stringr::str_sub(time, start = -5)) %>%
+  ggplot(aes(x = time_wo_year, y = daily_frequ, group = year, color = year)) +
+  geom_line() +
+  geom_point() +
+  ggtitle("Year to Year comparison of daily verbal dispute frequency in Boston")
 ```
 
 ```{r model building on boston crime}
