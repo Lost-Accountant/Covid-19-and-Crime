@@ -10,7 +10,7 @@ library(COVID19)
 library(gamm4)
 library(MTS) # BEKK11
 library(rmgarch) # multivariate GARCH
-
+library(vars) # VAR, causality
 ```
 
 ## Load Data
@@ -26,7 +26,7 @@ boston <- boston %>%
 
 
 ## COVID 19 RELATED
-```{r covid 19 related exploration}
+```{r covid 19 extract MA data}
 # extract MA data from US data. level 3 is by cities but cannot find Boston.
 covid19_MA <- covid19("USA", level = 2) %>%
   filter(state == "Massachusetts") %>%
@@ -38,9 +38,14 @@ covid19_MA_diff <- data.frame(diff(covid19_MA$confirmed))
 colnames(covid19_MA_diff)[1] = "confirmed"
 covid19_MA_diff$date = covid19_MA$date[2:length(covid19_MA$date)]
 
+head(covid19_MA)
+
+```
+
+```{r covid 19 related exploration}
 # extract for tranforming into time series data
-ts_MA <- covid19_MA %>%
-  select(date, confirmed) %>%
+ts_MA <- covid19_MA %>% 
+  dplyr::select(date, confirmed) %>%
   ts_xts()
 
 # plot time series of MA infection
@@ -64,14 +69,15 @@ covid19_MA_diff$timeInt = as.numeric(covid19_MA_diff$date)
 covid19_MA_diff$timeIid = covid19_MA_diff$timeInt
 
 # GAMM model
-gamMA <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
+# 50 too overfit. 15 looks decent
+gamMA <- gamm4::gamm4(confirmed ~  s(timeInt, k=15), random = ~(1|timeIid), 
 	data=covid19_MA_diff, family=poisson(link='log'))
 
 lme4::VarCorr(gamMA$mer)
 # looks like random intercept is making little difference.
 # choose to not have random effect to preserve it for time series analysis
 
-# 50 too overfit. 15 looks decent
+
 gamMA1 <- gamm4::gamm4(confirmed ~  s(timeInt, k=15),  
 	data=covid19_MA_diff, family=poisson(link='log'))
 
@@ -87,11 +93,11 @@ toPredict$timeInt = as.numeric(toPredict$time)
 # plot
 
 matplot(toPredict$time, 
-        exp(do.call(cbind, mgcv::predict.gam(gamMA1$gam, toPredict, se.fit=TRUE)) %*% 
+        exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE)) %*% 
               Pmisc::ciMat()), 
         col='black', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='count', ylim = c(0.5, 5000), xlim = as.Date(c(covid19_MA$date[1], covid19_MA$date[length(covid19_MA$date)])))
 
-forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamMA1$gam, toPredict, se.fit=TRUE))))
+forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE))))
                         
                         
 # access residuals
@@ -110,10 +116,12 @@ plot.xts(MA_res_ts)
 # adf test
 adf.test(MA_res_ts)
 # Stationary process
+# NOT AT ALL
+# apply a filter???s
 ```
 
 
-# Non-plot exploration on crime
+## CRIME
 ```{r non-plot exploration}
 # summary of all crime
 boston_summary <- boston %>%
@@ -237,17 +245,16 @@ plot.xts(dispute_fit_xts, grid.col = 'white',
          col = 'darkblue', ylab = '')
 ```
 
-DRAW PLOT COMPARE AGAINST SAME SEASON LAST YEAR
 
 
-
-
-## Multivariate Volatility
-```{r Dyanamic Conditional Correlation}
+## Multivariate
+### Volatility
+#### BEKK
+```{r BEKK model}
 # plot raw data
 # based on common range of time
-combined <- merge(dispute_xts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")],
-                  ts_MA[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")])
+combined <- merge(dispute_xts[paste(start(MA_res_ts),end(dispute_xts), sep = "/")],
+                  ts_MA[paste(start(MA_res_ts),end(dispute_xts), sep = "/")])
 plot.xts(combined)
 
 
@@ -260,4 +267,48 @@ plot.xts(combined_diff)
 # fit a BEKK GARCH model
 BEKK <- BEKK11(combined_diff)
 ```
+#### DCC
+```{r dynamic conditional correlation}
+# specify garch model
+# GARCH(1,1) for each
+garch11_sepc <- ugarchspec(mean.model = list(armaOrder = c(0, 0)),
+                           variance.model = list(garchOrder = c(1,1),
+                                                 model = 'sGARCH'), distribution.model = 'norm')
 
+# specify DCC spec
+# create 2 GARCH(1,1) for each of the two time series
+dcc_spec <- dccspec(uspec = multispec(replicate(2, garch11_sepc)),
+                    dccOrder = c(1,1), distribution = 'mvnorm')
+
+# fit daily change data into DCC model
+#dcc_fit <- dccfit(dcc_spec, data = combined)
+
+# currently doesn't work due to less than 100 variables
+# recommended to try BayesGARCH
+# looking for multivariate implementation of BayesGARCH
+```
+currently doesn't work due to less than 100 variables
+recommended to try BayesGARCH
+looking for multivariate implementation of BayesGARCH
+
+### Mean
+#### VAR
+```{r Vector Auto Regressive implementation}
+# range where covid and crime overlaps
+common_time <- seq.Date(as.Date(start(combined_diff)),
+                          as.Date(end(combined_diff)), 
+                          by="day")
+
+# examine two time series
+plotrix::twoord.plot(common_time, combined_diff$daily_frequ,
+                     common_time, combined_diff$residuals,
+                     type = c("l","l"),
+                     main = "Daily number of verbal dispute cases 
+                     and number of confirmed cases daily in Boston",
+                     xaxt = "n",
+                     ylab = "number of verbal dispute cases",
+                     rylab = "number of daily fluctuation of covid 19 cases")
+
+# VAR model estimation
+VAR_dispute <- VAR(y=combined_diff, p = )
+```
