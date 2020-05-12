@@ -1,4 +1,4 @@
-```{r load library}
+```{r load library, message=FALSE}
 library(tidyverse)
 library(tsbox)
 library(xts)
@@ -70,19 +70,12 @@ covid19_MA_diff$timeIid = covid19_MA_diff$timeInt
 
 # GAMM model
 # 50 too overfit. 15 looks decent
-gamMA <- gamm4::gamm4(confirmed ~  s(timeInt, k=15), random = ~(1|timeIid), 
+gamMA <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
 	data=covid19_MA_diff, family=poisson(link='log'))
 
 lme4::VarCorr(gamMA$mer)
 # looks like random intercept is making little difference.
 # choose to not have random effect to preserve it for time series analysis
-
-
-gamMA1 <- gamm4::gamm4(confirmed ~  s(timeInt, k=15),  
-	data=covid19_MA_diff, family=poisson(link='log'))
-
-# compare (meaningless coefficients)
-knitr::kable(cbind(summary(gamMA$mer)$coef[,1:2], summary(gamMA1$mer)$coef[,1:2]), digits = 3)
 
 # plot fitted value
 toPredict = data.frame(time = seq(covid19_MA_diff$date[1], 
@@ -95,8 +88,10 @@ toPredict$timeInt = as.numeric(toPredict$time)
 matplot(toPredict$time, 
         exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE)) %*% 
               Pmisc::ciMat()), 
-        col='black', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='count', ylim = c(0.5, 5000), xlim = as.Date(c(covid19_MA$date[1], covid19_MA$date[length(covid19_MA$date)])))
+        col='black', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='count', 
+        ylim = c(0.5, 5000), xlim = as.Date(c(covid19_MA$date[1], covid19_MA$date[length(covid19_MA$date)])))
 
+# obtain forecast
 forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE))))
                         
                         
@@ -117,7 +112,13 @@ plot.xts(MA_res_ts)
 adf.test(MA_res_ts)
 # Stationary process
 # NOT AT ALL
-# apply a filter???s
+
+# HP filter
+#MA_res_ts_cyclical <- mFilter::hpfilter(MA_res_ts$residuals, type = "lambda")
+
+
+# apply a filter???
+# Hodrick-Prescott filter
 ```
 
 
@@ -154,7 +155,7 @@ boston %>%
 # verbal dispute per month
 dispute <- boston_monthly %>%
   ungroup() %>%
-  select(OFFENSE_DESCRIPTION, YEAR, MONTH, monthly_freq) %>%
+  dplyr::select(OFFENSE_DESCRIPTION, YEAR, MONTH, monthly_freq) %>%
   filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE")
 
 # construct time
@@ -187,13 +188,22 @@ ts_plot(dispute_diff, title = "Change in the number of VERBAL DISPUTE cases per 
 dispute_daily <- boston_daily %>%
   ungroup() %>%
   filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE") %>%
-  select(date, daily_frequ)
+  dplyr::select(date, daily_frequ)
 
 colnames(dispute_daily)[1] <- 'time'
 
 dispute_xts <- ts_xts(dispute_daily)
 
 plot.xts(dispute_xts)
+
+# already stationary
+# no need to do first difference to obtain stationarity
+dispute_xts <- ts_xts(dispute_daily)
+# following two steps are unnecessary
+dispute_diff_xts <- na.omit(diff(dispute_xts))
+plot.xts(dispute_diff_xts["2020/"],
+         main = "Change in the number of verbal dispute
+         per day in Boston since 2020")
 
 # plot daily dispute from 2020
 plot.xts(dispute_xts["2020-01-01/"], main = "number of VERBAL DISPUTE per day in Boston since 2020")
@@ -215,14 +225,6 @@ dispute_daily %>%
 
 ```{r model building on boston crime}
 
-# already stationary
-# no need to do first difference to obtain stationarity
-dispute_xts <- ts_xts(dispute_daily)
-# following two steps are unnecessary
-dispute_diff_xts <- na.omit(diff(dispute_xts))
-plot.xts(dispute_diff_xts["2020/"],
-         main = "Change in the number of verbal dispute
-         per day in Boston since 2020")
 
 model_arma_garch <- ugarchspec(variance.model = list(model = 'sGARCH', garchOrder = c(1,1)),
                            mean.model = list(armaOrder = c(1,0), include.mean = TRUE),
@@ -310,5 +312,22 @@ plotrix::twoord.plot(common_time, combined_diff$daily_frequ,
                      rylab = "number of daily fluctuation of covid 19 cases")
 
 # VAR model estimation
-VAR_dispute <- VAR(y=combined_diff, p = )
+VAR_dispute <- VAR(y=combined_diff, p = 10)
+
+# Granger Causality test
+summary(VAR_dispute)
+causality(VAR_dispute, cause = "daily_frequ")
+causality(VAR_dispute, cause = "residuals")
+
+# Impulse Response Function
+irf1 <- irf(VAR_dispute, impulse = "daily_frequ", response = "residuals", n.ahead = 24)
+plot(irf1, sub = "")
+
+irf2 <- irf(VAR_dispute, impulse = "residuals", response = "daily_frequ", n.ahead = 24)
+plot(irf2, sub = "")
+
+# obtain forecast
+VAR_dispute_forecast <- predict(VAR_dispute, n.ahead = 24)
+par(mai = c(0.4,0.4,0.5,0.1), cex.main = 0.8)
+plot(VAR_dispute_forecast)
 ```
