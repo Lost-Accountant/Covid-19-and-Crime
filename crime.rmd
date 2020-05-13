@@ -330,8 +330,9 @@ plot(VAR_dispute_forecast)
 
 # construct dispute AR(10) without help of coivd
 
-dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(10,0,0))
+dispute_ar <- arima(dispute_diff_xts, order = c(10,0,0))
 dispute_ar_forecast <- predict(dispute_ar, n.ahead = 24)
 ts.plot(dispute_ar_forecast$pred, 
         gpars = list(col = "red"))
+
 ```
