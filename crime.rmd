@@ -51,7 +51,7 @@ ts_MA <- covid19_MA %>%
 # plot time series of MA infection
 ts_plot(ts_MA)
 # conduct ADF Test
-adf.test(ts_MA)
+adf.test(as.ts(ts_MA))
 # not stationary at all
 
 # try first log difference
@@ -109,16 +109,9 @@ MA_res_ts <- ts_xts(MA_res)
 
 plot.xts(MA_res_ts)
 # adf test
-adf.test(MA_res_ts)
+adf.test(as.ts(MA_res_ts))
 # Stationary process
-# NOT AT ALL
-
-# HP filter
-#MA_res_ts_cyclical <- mFilter::hpfilter(MA_res_ts$residuals, type = "lambda")
-
-
-# apply a filter???
-# Hodrick-Prescott filter
+# adf.test does not work on xts. needs to transform
 ```
 
 
@@ -176,11 +169,12 @@ ts_plot(dispute_ts, title="Number of VERBAL DISPUTE cases per month in Boston")
 
 # stationary?
 adf.test(dispute_ts)
-# adf test result is stationary, no need for differentiating
+# not stationary
 
 # try to detrend
 dispute_diff <- diff(dispute_ts)
 adf.test(dispute_diff)
+# stationary
 ts_plot(dispute_diff, title = "Change in the number of VERBAL DISPUTE cases per month in Boston")
 
 
@@ -318,6 +312,7 @@ VAR_dispute <- VAR(y=combined_diff, p = 10)
 summary(VAR_dispute)
 causality(VAR_dispute, cause = "daily_frequ")
 causality(VAR_dispute, cause = "residuals")
+# prediction advantage from covid to dispute is highly significant
 
 # Impulse Response Function
 irf1 <- irf(VAR_dispute, impulse = "daily_frequ", response = "residuals", n.ahead = 24)
@@ -326,8 +321,17 @@ plot(irf1, sub = "")
 irf2 <- irf(VAR_dispute, impulse = "residuals", response = "daily_frequ", n.ahead = 24)
 plot(irf2, sub = "")
 
+# shock both significant at around 7 days later
+
 # obtain forecast
 VAR_dispute_forecast <- predict(VAR_dispute, n.ahead = 24)
 par(mai = c(0.4,0.4,0.5,0.1), cex.main = 0.8)
 plot(VAR_dispute_forecast)
+
+# construct dispute AR(10) without help of coivd
+
+dispute_ar <- arima(dispute_diff_xts, order = c(10,0,0))
+dispute_ar_forecast <- predict(dispute_ar, n.ahead = 24)
+ts.plot(dispute_diff_xts, dispute_ar_forecast$pred, 
+        gpars = list(col = c("black","red")))
 ```
