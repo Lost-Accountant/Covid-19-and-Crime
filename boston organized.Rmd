@@ -108,3 +108,20 @@ matpoints(toPredict$time, covid19_MA_diff$confirmed,
           col = 'black',
           type = 'l')
 ```
+The overall trend of the covid 19 infection in Boston is successfully modeled and displayed above, including a 95% confidence interval. However, those are not very important. Now let's take a look at crime situation in Boston.
+
+# Verbal Dispute
+## Load crime data
+```{r load crime data}
+boston <- read.csv('boston.csv')
+head(boston)
+
+# add date
+boston <- boston %>%
+  mutate(date = substr(OCCURRED_ON_DATE, start = 1, stop = 10))
+
+```
+
+## Overview of situation
+```{r summary}
+``
