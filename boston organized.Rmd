@@ -2,7 +2,9 @@
 title: "Boston organized"
 author: "Zhengkai Fu"
 date: "14/05/2020"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 ```{r library, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -47,13 +49,15 @@ ts_MA <- covid19_MA %>%
   ts_xts()
 
 plot.xts(ts_MA,
-         main = "Cumulative confirmed cases of COVID19 in Boston")
+         main = "Cumulative confirmed cases 
+         of COVID19 in Boston")
 
 # plot daily cases
 # first difference
 ts_diff_MA <- diff(ts_MA)
 plot.xts(ts_diff_MA,
-         main = "Daily confirmed cases of COVID19 in Boston")
+         main = "Daily confirmed cases of
+         COVID19 in Boston")
 ```
 
 As shown above, cumulative cases and daily cases have been plotted above.
