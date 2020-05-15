@@ -138,9 +138,11 @@ boston %>%
   geom_bar()
 
 # top 5 crime over time
+# monthly
+# exclude May due to incomplete info
 boston %>%
   select(y_month, OFFENSE_DESCRIPTION) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5]) %>% 
+  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], y_month != "2020-05") %>% 
   count(y_month, OFFENSE_DESCRIPTION) %>%
   ggplot(aes(y_month, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
   geom_area(size = 0.01, alpha = 0.5) + 
