@@ -185,4 +185,47 @@ boston %>%
 
 ```
 
+Many plots in different style about the top 5 most frequent crime in Boston.
 
+## Verbal Dispute
+```{r verbal dispute summary}
+# extract verbal dispute cases
+dispute <- boston %>%
+  filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE") %>%
+  group_by(date) %>%
+  summarise(daily_freq = n())
+
+dispute_monthly <- boston %>%
+  # exclude May due to incomplete data
+  filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE",
+         y_month != "2020-05") %>%
+  group_by(y_month) %>%
+  summarise(monthly_freq = n())
+
+# change colname name for time series
+colnames(dispute)[1] <- "time"
+colnames(dispute_monthly)[1] <- "time"
+
+# convert to xts time series
+dispute_xts <- ts_xts(dispute)
+dispute_monthly_xts <- ts_xts(dispute_monthly)
+
+# plot overall monthly situation
+plot.xts(dispute_monthly_xts,
+         main = "Number of VERBAL DISPUTE cases 
+         per month in Boston")
+
+# plot daily situation since 2020
+plot.xts(dispute_xts["2020-01-01/"], 
+         main = "number of VERBAL DISPUTE cases 
+         per day in Boston since 2020")
+
+# year to year comparison
+dispute %>%
+  mutate(year = stringr::str_extract(time, "^.{4}"),
+         month_date = stringr::str_sub(time, start = -5)) %>%
+  ggplot(aes(x = month_date, y = daily_freq, group = year, color = year)) +
+  geom_line() +
+  geom_point() +
+  ggtitle("Year to Year comparison of daily verbal dispute frequency in Boston")
+```
