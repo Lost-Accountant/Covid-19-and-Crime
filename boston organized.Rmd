@@ -110,7 +110,7 @@ matpoints(toPredict$time, covid19_MA_diff$confirmed,
 ```
 The overall trend of the covid 19 infection in Boston is successfully modeled and displayed above, including a 95% confidence interval. However, those are not very important. Now let's take a look at crime situation in Boston.
 
-# Verbal Dispute
+# Boston Crime
 ## Load crime data
 ```{r load crime data}
 boston <- read.csv('boston.csv')
@@ -118,10 +118,69 @@ head(boston)
 
 # add date
 boston <- boston %>%
-  mutate(date = substr(OCCURRED_ON_DATE, start = 1, stop = 10))
+  mutate(date = substr(OCCURRED_ON_DATE, start = 1, stop = 10)) %>%
+  mutate(y_month = substr(OCCURRED_ON_DATE, start = 1, stop = 7))
 
 ```
 
-## Overview of situation
+## Overview of crime situation
 ```{r summary}
-``
+# summary of all crime
+boston_summary <- boston %>%
+  group_by(OFFENSE_DESCRIPTION) %>%
+  summarise(number_of_crime = n()) %>%
+  arrange(desc(number_of_crime))
+
+# bar chart of 5 most frequent crime over the years
+boston %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
+  ggplot(aes(x=OFFENSE_DESCRIPTION)) +
+  geom_bar()
+
+# top 5 crime over time
+boston %>%
+  select(y_month, OFFENSE_DESCRIPTION) %>%
+  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5]) %>% 
+  count(y_month, OFFENSE_DESCRIPTION) %>%
+  ggplot(aes(y_month, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
+  geom_area(size = 0.01, alpha = 0.5) + 
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  ggtitle("Frequency of top 5 crime in Boston since 2015")
+
+# top 5 crime in 2020
+# area chart
+boston %>%
+  select(date, OFFENSE_DESCRIPTION, YEAR) %>%
+  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020) %>% 
+  count(date, OFFENSE_DESCRIPTION) %>%
+  ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
+  geom_area(size = 0.01, alpha = 0.4) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  ggtitle("Frequency of top 5 crime in Boston in 2020")
+
+# line
+# per day
+boston %>%
+  select(date, OFFENSE_DESCRIPTION, YEAR) %>%
+  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020) %>% 
+  count(date, OFFENSE_DESCRIPTION) %>%
+  ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1") +
+  ggtitle("Frequency of top 5 crime in Boston in 2020")
+
+
+# per month
+# exclude May
+boston %>%
+  select(MONTH, OFFENSE_DESCRIPTION, YEAR) %>%
+  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020, MONTH != 5) %>% 
+  count(MONTH, OFFENSE_DESCRIPTION) %>%
+  ggplot(aes(MONTH, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1") +
+  ggtitle("Monthly frequency of top 5 crime in Boston in 2020")
+
+```
+
+
