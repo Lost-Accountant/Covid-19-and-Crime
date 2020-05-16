@@ -13,6 +13,7 @@ library(xts)
 library(COVID19) # to get data about covid 19
 library(aTSA) # adf.test
 library(forecast) #arima model
+library(vars) #VAR and Causality
 ```
 
 This document is to study the possible relationship between COVID-19 and frequency of crime committed in the city of Boston.
