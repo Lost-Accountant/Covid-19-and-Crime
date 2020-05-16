@@ -15,7 +15,7 @@ library(vars) # VAR, causality
 
 ## Load Data
 ```{r load data}
-boston <- read.csv('boston.csv')
+boston <- utils::read.csv('boston.csv')
 head(boston)
 
 # add date

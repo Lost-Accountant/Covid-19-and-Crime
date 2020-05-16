@@ -141,7 +141,7 @@ The residuals obtained here represents the fluctuation of daily confirmed cases 
 # Boston Crime
 ## Load crime data
 ```{r load crime data}
-boston <- read.csv('boston.csv')
+boston <- utils::read.csv('boston.csv')
 head(boston)
 
 # add date
@@ -289,13 +289,71 @@ pacf(as.ts(dispute_diff_xts))
 
 # k = 3 for PACF
 dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(3,0,0))
+dispute_ar
 
 # auto arima model
 dispute_ar_auto <- forecast::auto.arima(as.ts(dispute_diff_xts))
+dispute_ar_auto
 
 # artificial neural network model
+dispute_ann <- nnetar(as.ts(dispute_diff_xts), size = 10)
+dispute_ann
+```
+Three univariate models have been constructed, which include:
+
+An AR(3) model based on the PACF plot.
+
+An MA(1) model based on the auto.arima algorithm.
+
+An artificial neural network that has 10 hidden nodes and has the form of a AR(3) and S-AR(10) on daily frequency.
+
+```{r in sample performance check}
+accu_ar <- accuracy(dispute_ar)
+accu_auto <- accuracy(dispute_ar_auto)
+accu_ann <- accuracy(dispute_ann)
+
+accu_compare <- data.frame(rbind(accu_ar,
+                                 accu_auto,
+                                 accu_ann))
+
+rownames(accu_compare) <- c("AR(3)", "Auto ARIMA", "Neural Net")
+
+kableExtra::kable(accu_compare, format = "markdown")
+```
+Looks like artificial neural network is the best performing one out of all categories, with the smallest in-sample error.
+
+```{r univariate forecast}
+ar_forecast <- predict(dispute_ar, n.ahead = 24)
+auto_forecast <- predict(dispute_ar_auto, n.ahead = 24)
+ann_forecast <- predict(dispute_ann, n.ahead = 24)
+
+# plot forecast
+ts.plot(test, ar_forecast$pred, 
+        auto_forecast$pred, ann_forecast$mean,
+        gpars = list(col = c("black", "red","green","blue")))
 
 ```
 
+The forecast have been plotted above. All are very short memory, and couldn't predict the fluctuation well in long term.
 
 ### Vector Auto-Regressive
+```{r var}
+# combine 2 time series
+combined_diff <- merge(dispute_diff_xts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")],
+                  MA_res_ts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")])
+
+# range where covid and crime overlaps
+common_time <- seq.Date(as.Date(start(combined_diff)),
+                          as.Date(end(combined_diff)), 
+                          by="day")
+
+# examine two time series
+plotrix::twoord.plot(common_time, combined_diff$daily_freq,
+                     common_time, combined_diff$residuals,
+                     type = c("l","l"),
+                     main = "Daily number of verbal dispute cases 
+                     and number of confirmed cases daily in Boston",
+                     xaxt = "n",
+                     ylab = "number of verbal dispute cases",
+                     rylab = "number of daily fluctuation of covid 19 cases")
+```
