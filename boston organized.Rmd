@@ -24,8 +24,9 @@ This document is to study the possible relationship between COVID-19 and frequen
 # extract MA data from US data. level 3 is by cities but cannot find Boston.
 covid19_MA <- covid19("USA", level = 2) %>%
   filter(state == "Massachusetts") %>%
-  # filter out days when confirmed is zero
-  filter(confirmed > 0)
+  # filter out days when confirmed is zero or one
+  # becasue when it was 1 for a very long time
+  filter(confirmed > 1)
 
 # brief display
 head(covid19_MA)
@@ -79,11 +80,11 @@ covid19_MA_diff$timeInt = as.numeric(covid19_MA_diff$date)
 covid19_MA_diff$timeIid = covid19_MA_diff$timeInt
 
 # GAMM model
-gamMA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 100), 
+gamMA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 70), 
                       random = ~(1|timeIid),
                       data = covid19_MA_diff,
                       family = poisson(link = 'log'))
-# currently 100 is the max due to length of data
+# currently 70 is the max due to length of data
 ```
 
 In order to study covid19's impact on Boston, its trend needs to be modeled first to have a better understanding of the situation. A Generalized Additive Mixed Model is used here, which is a direct copy from prof. Patrick Brown's work in STA303 Assignment 3.
@@ -169,7 +170,7 @@ boston %>%
 # monthly
 # exclude May due to incomplete info
 boston %>%
-  select(y_month, OFFENSE_DESCRIPTION) %>%
+  dplyr::select(y_month, OFFENSE_DESCRIPTION) %>%
   filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], y_month != "2020-05") %>% 
   count(y_month, OFFENSE_DESCRIPTION) %>%
   ggplot(aes(y_month, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
@@ -180,7 +181,7 @@ boston %>%
 # top 5 crime in 2020
 # area chart
 boston %>%
-  select(date, OFFENSE_DESCRIPTION, YEAR) %>%
+  dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
   filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020) %>% 
   count(date, OFFENSE_DESCRIPTION) %>%
   ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
@@ -191,7 +192,7 @@ boston %>%
 # line
 # per day
 boston %>%
-  select(date, OFFENSE_DESCRIPTION, YEAR) %>%
+  dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
   filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020) %>% 
   count(date, OFFENSE_DESCRIPTION) %>%
   ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
@@ -203,7 +204,7 @@ boston %>%
 # per month
 # exclude May
 boston %>%
-  select(MONTH, OFFENSE_DESCRIPTION, YEAR) %>%
+  dplyr::select(MONTH, OFFENSE_DESCRIPTION, YEAR) %>%
   filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020, MONTH != 5) %>% 
   count(MONTH, OFFENSE_DESCRIPTION) %>%
   ggplot(aes(MONTH, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
@@ -266,7 +267,7 @@ boston %>%
 ```{r check stationarity and transform}
 adf.test(as.ts(dispute_xts))
 
-dispute_diff_xts <- diff(dispute_xts)
+dispute_diff_xts <- na.omit(diff(dispute_xts))
 
 adf.test(as.ts(dispute_diff_xts))
 
@@ -303,7 +304,7 @@ Three univariate models have been constructed, which include:
 
 An AR(3) model based on the PACF plot.
 
-An MA(1) model based on the auto.arima algorithm.
+An AR(3) model based on the auto.arima algorithm.
 
 An artificial neural network that has 10 hidden nodes and has the form of a AR(3) and S-AR(10) on daily frequency.
 
@@ -328,7 +329,7 @@ auto_forecast <- predict(dispute_ar_auto, n.ahead = 24)
 ann_forecast <- predict(dispute_ann, n.ahead = 24)
 
 # plot forecast
-ts.plot(test, ar_forecast$pred, 
+ts.plot(as.ts(dispute_diff_xts), ar_forecast$pred, 
         auto_forecast$pred, ann_forecast$mean,
         gpars = list(col = c("black", "red","green","blue")))
 
@@ -337,7 +338,7 @@ ts.plot(test, ar_forecast$pred,
 The forecast have been plotted above. All are very short memory, and couldn't predict the fluctuation well in long term.
 
 ### Vector Auto-Regressive
-```{r var}
+```{r overlap 2 time series}
 # combine 2 time series
 combined_diff <- merge(dispute_diff_xts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")],
                   MA_res_ts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")])
@@ -356,4 +357,38 @@ plotrix::twoord.plot(common_time, combined_diff$daily_freq,
                      xaxt = "n",
                      ylab = "number of verbal dispute cases",
                      rylab = "number of daily fluctuation of covid 19 cases")
+```
+Possible for VAR
+
+```{r VAR}
+# VAR model estimation
+VAR_dispute <- VAR(y=combined_diff, p = 10)
+
+# Granger Causality test
+summary(VAR_dispute)
+causality(VAR_dispute, cause = "daily_freq")
+causality(VAR_dispute, cause = "residuals")
+# prediction advantage from covid to dispute is highly significant
+
+# Impulse Response Function
+irf1 <- irf(VAR_dispute, impulse = "daily_freq", response = "residuals", n.ahead = 24)
+plot(irf1, sub = "")
+
+irf2 <- irf(VAR_dispute, impulse = "residuals", response = "daily_freq", n.ahead = 24)
+plot(irf2, sub = "")
+
+# shock both significant at around 7 days later
+
+# obtain forecast
+VAR_dispute_forecast <- predict(VAR_dispute, n.ahead = 24)
+par(mai = c(0.4,0.4,0.5,0.1), cex.main = 0.8)
+plot(VAR_dispute_forecast)
+
+# construct dispute AR(10) without help of coivd
+
+dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(10,0,0))
+dispute_ar_forecast <- predict(dispute_ar, n.ahead = 24)
+ts.plot(dispute_ar_forecast$pred, 
+        gpars = list(col = "red"))
+
 ```
