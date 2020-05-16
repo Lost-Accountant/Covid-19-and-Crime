@@ -12,6 +12,7 @@ library(tsbox) # transform data into time series
 library(xts)
 library(COVID19) # to get data about covid 19
 library(aTSA) # adf.test
+library(forecast) #arima model
 ```
 
 This document is to study the possible relationship between COVID-19 and frequency of crime committed in the city of Boston.
@@ -110,6 +111,33 @@ matpoints(toPredict$time, covid19_MA_diff$confirmed,
 ```
 The overall trend of the covid 19 infection in Boston is successfully modeled and displayed above, including a 95% confidence interval. However, those are not very important. Now let's take a look at crime situation in Boston.
 
+#### Obtain the residuals
+```{r covid 19 residual}
+# obtain forecast
+forecast_covid <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE))))
+                        
+                        
+# access residuals
+MA_res <- data.frame(covid19_MA_diff$confirmed - forecast_covid$fit)
+
+# transform into time series
+MA_res$time = covid19_MA_diff$date
+colnames(MA_res)[1] = "residuals"
+
+col_order <- c("time", "residuals")
+MA_res <- MA_res[, col_order]
+
+MA_res_ts <- ts_xts(MA_res)
+
+plot.xts(MA_res_ts,
+         main = "Daily fluctuation of COVID 19 confirmd cases
+         in MA outside its overall trend")
+# adf test
+adf.test(as.ts(MA_res_ts))
+```
+
+The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in Massachusetts, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
+
 # Boston Crime
 ## Load crime data
 ```{r load crime data}
@@ -188,6 +216,7 @@ boston %>%
 Many plots in different style about the top 5 most frequent crime in Boston.
 
 ## Verbal Dispute
+### Summary with Visualization
 ```{r verbal dispute summary}
 # extract verbal dispute cases
 dispute <- boston %>%
@@ -221,11 +250,52 @@ plot.xts(dispute_xts["2020-01-01/"],
          per day in Boston since 2020")
 
 # year to year comparison
-dispute %>%
-  mutate(year = stringr::str_extract(time, "^.{4}"),
-         month_date = stringr::str_sub(time, start = -5)) %>%
-  ggplot(aes(x = month_date, y = daily_freq, group = year, color = year)) +
+boston %>%
+  filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE",
+         # filter out May 2020
+         y_month != "2020-05") %>%
+  count(YEAR, MONTH) %>%
+  ggplot(aes(x = as.factor(MONTH), y = n, group = YEAR, color = as_factor(YEAR))) +
   geom_line() +
-  geom_point() +
-  ggtitle("Year to Year comparison of daily verbal dispute frequency in Boston")
+  ggtitle("Year to Year comparison of 
+          daily verbal dispute frequency in Boston") +
+  theme_classic()
 ```
+
+### Stationarity check
+```{r check stationarity and transform}
+adf.test(as.ts(dispute_xts))
+
+dispute_diff_xts <- diff(dispute_xts)
+
+adf.test(as.ts(dispute_diff_xts))
+
+plot.xts(dispute_diff_xts["2020-01-01/"],
+         main = "The change in daily cases of
+         VERBAL DISPUTE in Boston")
+
+# since only the section after COVID 19 is related
+dispute_diff_xts <- dispute_diff_xts[paste(start(MA_res_ts),end(dispute_diff_xts), sep = "/")]
+```
+
+Raw data is not completely stationary in every AR(p) term but would be fine for most of the situation, but with a simple tranformation with its first difference, it rejects random walk null hypothesis and can be stationary in every AR(p) term, which improves our model flexibility, so the first difference would be used.
+
+### Univariate Model
+#### Simple AR model
+```{r univariate model}
+# plot ACF and PACF
+acf(as.ts(dispute_diff_xts))
+pacf(as.ts(dispute_diff_xts))
+
+# k = 3 for PACF
+dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(3,0,0))
+
+# auto arima model
+dispute_ar_auto <- forecast::auto.arima(as.ts(dispute_diff_xts))
+
+# artificial neural network model
+
+```
+
+
+### Vector Auto-Regressive
