@@ -292,6 +292,10 @@ pacf(as.ts(dispute_diff_xts))
 dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(3,0,0))
 dispute_ar
 
+# p = 10 for comparison against VAR
+dispute_ar_10 <- arima(as.ts(dispute_diff_xts), order = c(10,0,0))
+dispute_ar_10
+
 # auto arima model
 dispute_ar_auto <- forecast::auto.arima(as.ts(dispute_diff_xts))
 dispute_ar_auto
@@ -312,12 +316,14 @@ An artificial neural network that has 10 hidden nodes and has the form of a AR(3
 accu_ar <- accuracy(dispute_ar)
 accu_auto <- accuracy(dispute_ar_auto)
 accu_ann <- accuracy(dispute_ann)
+accu_ar10 <- accuracy(dispute_ar_10)
 
 accu_compare <- data.frame(rbind(accu_ar,
                                  accu_auto,
-                                 accu_ann))
+                                 accu_ann,
+                                 accu_ar10))
 
-rownames(accu_compare) <- c("AR(3)", "Auto ARIMA", "Neural Net")
+rownames(accu_compare) <- c("AR(3)", "Auto ARIMA", "Neural Net","AR(10)")
 
 kableExtra::kable(accu_compare, format = "markdown")
 ```
@@ -327,11 +333,13 @@ Looks like artificial neural network is the best performing one out of all categ
 ar_forecast <- predict(dispute_ar, n.ahead = 24)
 auto_forecast <- predict(dispute_ar_auto, n.ahead = 24)
 ann_forecast <- predict(dispute_ann, n.ahead = 24)
+dispute_ar_10_forecast <- predict(dispute_ar, n.ahead = 24)
 
 # plot forecast
 ts.plot(as.ts(dispute_diff_xts), ar_forecast$pred, 
         auto_forecast$pred, ann_forecast$mean,
-        gpars = list(col = c("black", "red","green","blue")))
+        dispute_ar_10_forecast$pred,
+        gpars = list(col = c("black", "red","green","blue","purple")))
 
 ```
 
@@ -383,12 +391,5 @@ plot(irf2, sub = "")
 VAR_dispute_forecast <- predict(VAR_dispute, n.ahead = 24)
 par(mai = c(0.4,0.4,0.5,0.1), cex.main = 0.8)
 plot(VAR_dispute_forecast)
-
-# construct dispute AR(10) without help of coivd
-
-dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(10,0,0))
-dispute_ar_forecast <- predict(dispute_ar, n.ahead = 24)
-ts.plot(dispute_ar_forecast$pred, 
-        gpars = list(col = "red"))
 
 ```
