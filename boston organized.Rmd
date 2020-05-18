@@ -333,7 +333,7 @@ Looks like artificial neural network is the best performing one out of all categ
 ```{r univariate forecast}
 ar_forecast <- predict(dispute_ar, n.ahead = 24)
 auto_forecast <- predict(dispute_ar_auto, n.ahead = 24)
-ann_forecast <- predict(dispute_ann, n.ahead = 24)
+ann_forecast <- predict(dispute_ann, h=24)
 dispute_ar_10_forecast <- predict(dispute_ar, n.ahead = 24)
 
 # plot forecast
@@ -371,7 +371,7 @@ Possible for VAR
 
 ```{r VAR}
 # VAR model estimation
-VAR_dispute <- VAR(y=combined_diff, p = 10)
+VAR_dispute <- vars::VAR(y=na.omit(combined_diff), p = 10)
 
 # Granger Causality test
 summary(VAR_dispute)
