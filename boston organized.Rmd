@@ -328,6 +328,7 @@ rownames(accu_compare) <- c("AR(3)", "Auto ARIMA", "Neural Net","AR(10)")
 
 kableExtra::kable(accu_compare, format = "markdown")
 ```
+
 Looks like artificial neural network is the best performing one out of all categories, with the smallest in-sample error.
 
 ```{r univariate forecast}
@@ -393,4 +394,94 @@ VAR_dispute_forecast <- predict(VAR_dispute, n.ahead = 24)
 par(mai = c(0.4,0.4,0.5,0.1), cex.main = 0.8)
 plot(VAR_dispute_forecast)
 
+```
+
+
+## Vandalism
+### Summary with Visualization
+```{r vandalism summary}
+# extract vandalism cases
+vandalism <- boston %>%
+  filter(OFFENSE_DESCRIPTION == "VANDALISM") %>%
+  group_by(date) %>%
+  summarise(daily_freq = n())
+
+vandalism_monthly <- boston %>%
+  # exclude May due to incomplete data
+  filter(OFFENSE_DESCRIPTION == "VANDALISM",
+         y_month != "2020-05") %>%
+  group_by(y_month) %>%
+  summarise(monthly_freq = n())
+
+# change colname for time series
+colnames(vandalism)[1] <- "time"
+colnames(vandalism_monthly)[1] <- "time"
+
+# convert to xts time series
+vandalism_xts <- ts_xts(vandalism)
+vandalism_monthly_xts <- ts_xts(vandalism_monthly)
+
+# plot overall monthly situation
+plot.xts(vandalism_monthly_xts,
+         main = "Number of VANDALISM cases 
+         per month in Boston")
+
+# plot daily situation since 2020
+plot.xts(vandalism_xts["2020-01-01/"], 
+         main = "number of VANDALISM cases 
+         per day in Boston since 2020")
+
+# year to year comparison
+boston %>%
+  filter(OFFENSE_DESCRIPTION == "VANDALISM",
+         # filter out May 2020
+         y_month != "2020-05") %>%
+  count(YEAR, MONTH) %>%
+  ggplot(aes(x = as.factor(MONTH), y = n, group = YEAR, color = as_factor(YEAR))) +
+  geom_line() +
+  ggtitle("Year to Year comparison of 
+          daily VANDALISM frequency in Boston") +
+  theme_classic()
+```
+
+Unusual spikes in March.
+
+### Stationarity check
+```{r vandalism stationarity check}
+adf.test(as.ts(vandalism_xts))
+
+vandalism_diff_xts <- na.omit(diff(vandalism_xts))
+
+adf.test(as.ts(vandalism_diff_xts))
+
+plot.xts(vandalism_diff_xts["2020-01-01/"],
+         main = "The change in daily cases of
+         VANDALISM in Boston")
+
+# since only the section after COVID 19 is related
+vandalism_diff_xts <- vandalism_diff_xts[paste(start(MA_res_ts),end(vandalism_diff_xts), sep = "/")]
+```
+
+Unsual spikes in March.
+
+### Vector Auto Regressive
+```{r overlap 2 time series}
+# combine 2 time series
+combined_vandalism_diff <- merge(vandalism_diff_xts[paste(start(MA_res_ts),end(vandalism_diff_xts), sep = "/")],
+                  MA_res_ts[paste(start(MA_res_ts),end(vandalism_diff_xts), sep = "/")])
+
+# range where covid and crime overlaps
+common_time <- seq.Date(as.Date(start(combined_vandalism_diff)),
+                          as.Date(end(combined_vandalism_diff)), 
+                          by="day")
+
+# examine two time series
+plotrix::twoord.plot(common_time, combined_vandalism_diff$daily_freq,
+                     common_time, combined_vandalism_diff$residuals,
+                     type = c("l","l"),
+                     main = "Daily number of vandalism cases 
+                     and number of confirmed cases daily in Boston",
+                     xaxt = "n",
+                     ylab = "number of vandalism cases",
+                     rylab = "number of daily fluctuation of covid 19 cases")
 ```
