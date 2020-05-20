@@ -1,0 +1,208 @@
+---
+title: "datafest"
+author: "Zhuyi Huang"
+output: pdf_document
+---
+```{r library, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tsbox) # transform data into time series
+library(xts)
+library(COVID19) # to get data about covid 19
+library(aTSA) # adf.test
+library(forecast) #arima model
+library(vars) #VAR and Causality
+```
+
+# Boston Crime
+## Load crime data
+```{r load crime data}
+boston <- utils::read.csv('boston.csv')
+head(boston)
+
+# add date
+boston <- boston %>%
+  mutate(date = substr(OCCURRED_ON_DATE, start = 1, stop = 10)) %>%
+  mutate(y_month = substr(OCCURRED_ON_DATE, start = 1, stop = 7))
+
+```
+
+```{r crime data info}
+length(unique(boston_summary$OFFENSE_DESCRIPTION))
+# number of crime categories: 283
+length(unique(boston$DISTRICT))
+# number of district: 14
+
+boston %>%
+  ggplot(aes(x=DAY_OF_WEEK,fill=DAY_OF_WEEK)) +
+  geom_bar(width=0.5) + 
+  theme_classic() +
+  labs(y='Number of Crimes',x='Day of Week')
+
+```
+
+```{r}
+# bar chart of 5 most frequent crime over the years
+boston %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
+  ggplot(aes(x=OFFENSE_DESCRIPTION,fill=OFFENSE_DESCRIPTION)) +
+  geom_bar(width=0.5) +
+  coord_flip() +
+  theme_classic() +
+  labs(y='Number of Crimes',x='Offense Description')
+```
+
+### Univariate Model
+#### Simple AR model
+```{r univariate model}
+# white noise test
+for (i in 1:2) {
+  print(Box.test(as.ts(dispute_diff_xts), type='Ljung-Box',lag=6*i))
+}
+
+# plot ACF and PACF
+acf(as.ts(dispute_diff_xts))
+pacf(as.ts(dispute_diff_xts))
+
+# k = 3 for PACF
+dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(3,0,0))
+dispute_ar
+
+dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(3,0,1)) #ARMA(3,1) is better than above
+dispute_ar
+
+# p = 10 for comparison against VAR
+dispute_ar_10 <- arima(as.ts(dispute_diff_xts), order = c(10,0,0))
+dispute_ar_10
+
+# auto arima model
+dispute_ar_auto <- forecast::auto.arima(as.ts(dispute_diff_xts)) 
+dispute_ar_auto
+
+# since auto-arima says fit an ARIMA(0,0,1) model
+dispute_diff_xts.fit <- arima(as.ts(dispute_diff_xts), order=c(0,0,1))
+dispute_diff_xts.fit
+for (i in 1:2) {
+  print(Box.test(dispute_diff_xts.fit$residual, type='Ljung-Box',lag=6*i))
+}
+
+residual <- dispute_diff_xts.fit$resid
+par(mfrow=c(1,2))
+acf(residual)
+pacf(residual)
+Box.test(residual, type='Ljung-Box') #p-value=0.44, fit was good
+
+par(mfrow=c(1,2))
+acf(residual^2)
+pacf(residual^2)
+Box.test(residual^2, type='Ljung-Box') 
+# the squares of residuals are a sequence of white noise; 
+# the residuals are homoscedastic; No ARCH effect
+# The Ljung-box test confirms that the residuals do not have heteroscedasticity because the p-values are very large.
+```
+```{r ARCH test*}
+library(aTSA)
+aTSA::arch.test(dispute_diff_xts.fit)
+# The plots of residuals, squared residuals, p.values of PQ and LM tests 
+# Although, the p-values of Portmanteau test are pretty high
+# Lagrange multiplier test coefficients are significant, at least until lag 8
+
+library(FinTS)
+dispute_archTest <- ArchTest(residual,lags=12)
+dispute_archTest
+
+#we reject the null hypothesis and conclude the presence of ARCH(12) effects.
+```
+
+```{r bayesGARCH}
+install.packages('bayesGARCH')
+library(bayesGARCH)
+MCMC <- bayesGARCH(dispute_diff_xts, ccontrol = list(n.chain=2, l.chain=100))
+
+```
+
+```{r EXP SMOOTHING}
+#simple exponential smoothing for default ts assuming no trend
+dispute_forecasts <- HoltWinters(as.ts(dispute_diff_xts), beta=F, gamma=F,l.start = -10)
+dispute_forecasts
+plot(dispute_forecasts)
+dispute_forecasts$SSE
+# sum of squared error = 3657.46
+
+library('forecast')
+# predicting for next 14 days
+dispute_forecasts2 <- forecast:::forecast.HoltWinters(dispute_forecasts, h=14)
+#dispute_forecasts2
+forecast:::plot.forecast(dispute_forecasts2)
+dispute_forecasts2$residuals # 1 NA exist
+b <- dispute_forecasts2$residuals[-which(is.na(dispute_forecasts2$residuals))]
+acf(b,plot=T)
+Box.test(dispute_forecasts2$residual, type="Ljung-Box") # not indep
+
+plot(forecast(dispute_ar_auto, bootstrap = T))
+
+forecast::checkresiduals(dispute_ar_auto, test = F)
+forecast::checkresiduals(dispute_ar_auto, plot = F)
+```
+
+```{r}
+plotForecastErrors <- function(forecasterrors)
+  {
+     # make a histogram of the forecast errors:
+     mybinsize <- IQR(forecasterrors, na.rm = T)/4
+     mysd   <- sd(forecasterrors, na.rm = T)
+     mymin  <- min(forecasterrors, na.rm = T) - mysd*5
+     mymax  <- max(forecasterrors, na.rm = T) + mysd*3
+     # generate normally distributed data with mean 0 and standard deviation mysd
+     mynorm <- rnorm(10000, mean=0, sd=mysd)
+     mymin2 <- min(mynorm)
+     mymax2 <- max(mynorm)
+     if (mymin2 < mymin) { mymin <- mymin2 }
+     if (mymax2 > mymax) { mymax <- mymax2 }
+     # make a red histogram of the forecast errors, with the normally distributed data overlaid:
+     mybins <- seq(mymin, mymax, mybinsize)
+     hist(forecasterrors, col="red", freq=FALSE, breaks=mybins)
+     # freq=FALSE ensures the area under the histogram = 1
+     # generate normally distributed data with mean 0 and standard deviation mysd
+     myhist <- hist(mynorm, plot=FALSE, breaks=mybins)
+     # plot the normal curve as a blue line on top of the histogram of forecast errors:
+     points(myhist$mids, myhist$density, type="l", col="blue", lwd=2)
+}
+#The plot shows that the distribution of forecast errors is roughly centred on zero, and is more or less normally distributed.
+#The Ljung-Box test showed that there is little evidence of non-zero autocorrelations in the in-sample forecast errors, and the distribution of forecast errors seems to be normally distributed with mean zero. 
+# This suggests that the simple exponential smoothing method provides an adequate predictive model for water usage. 
+# Furthermore, the assumptions that the 80% and 95% predictions intervals were based upon
+#(that there are no autocorrelations in the forecast errors, and the forecast errors are normally distributed with mean zero and constant variance) are probably valid.
+
+plotForecastErrors(dispute_forecasts2$residuals)
+```
+
+```{r CROSS VALIDATION, eval=F}
+#---------Cross validation---------------
+#auto.arima forecast function for time series cross validation
+autoplot(forecast(dispute_ar_auto, bootstrap = T))
+
+library(zoo)
+z <- read.zoo(dispute)
+training <- window(z, start='2017-12-01', end='2020-05-17')
+testset <- window(z, start='2015-06-15', end='2017-11-29')
+accuracy(dispute_ar_auto, test=testset)
+accuracy(dispute_ann, test=testset)
+
+fc <- function(y, h, xreg)
+{
+  X <- xreg[1:length(y),]
+  if(NROW(xreg) < length(y) + h)
+    stop("Not enough xreg data for forecasting")
+  newX <- xreg[length(y)+(1:h),]
+  fit <- auto.arima(y, xreg=X)
+  forecast(fit, xreg=newX)
+}
+
+tsCV(y=training, f, xreg=testset)
+# error: results in NAs 
+
+autoplot(e)
+sqrt(mean(e^2,na.rm = T))
+```
+
+
