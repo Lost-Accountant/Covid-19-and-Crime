@@ -27,6 +27,12 @@ boston <- boston %>%
 ```
 
 ```{r crime data info}
+# summary of all crime
+boston_summary <- boston %>%
+  group_by(OFFENSE_DESCRIPTION) %>%
+  summarise(number_of_crime = n()) %>%
+  arrange(desc(number_of_crime))
+
 length(unique(boston_summary$OFFENSE_DESCRIPTION))
 # number of crime categories: 283
 length(unique(boston$DISTRICT))
@@ -52,6 +58,23 @@ boston %>%
 ```
 
 ### Univariate Model
+### Extract verbal dispute
+```{r verbal dispute summary}
+# extract verbal dispute cases
+dispute <- boston %>%
+  filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE") %>%
+  group_by(date) %>%
+  summarise(daily_freq = n())
+
+# change colname name for time series
+colnames(dispute)[1] <- "time"
+
+# convert to xts time series
+dispute_xts <- ts_xts(dispute)
+
+dispute_diff_xts <- na.omit(diff(dispute_xts))
+
+```
 #### Simple AR model
 ```{r univariate model}
 # white noise test

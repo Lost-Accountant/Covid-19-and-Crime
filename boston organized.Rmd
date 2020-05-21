@@ -136,6 +136,9 @@ plot.xts(MA_res_ts,
          in MA outside its overall trend")
 # adf test
 adf.test(as.ts(MA_res_ts))
+
+# lag residuals by 4 days due to testing time
+MA_res_lag <- lag.xts(MA_res_ts, k = 4)
 ```
 
 The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in Massachusetts, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
@@ -485,3 +488,24 @@ plotrix::twoord.plot(common_time, combined_vandalism_diff$daily_freq,
                      ylab = "number of vandalism cases",
                      rylab = "number of daily fluctuation of covid 19 cases")
 ```
+Almost perfect sync.
+
+VEC is probably not appropriate due to not having long-term relationship in nature, though linear model has a linear fit.
+
+```{r VAR vandalism}
+# VAR model estimation
+VAR_vandalism <- vars::VAR(y=na.omit(combined_vandalism_diff), p = 10)
+
+# Granger Causality test
+summary(VAR_vandalism)
+causality(VAR_vandalism, cause = "daily_freq")
+causality(VAR_vandalism, cause = "residuals")
+
+irf_vandalism1 <- irf(VAR_vandalism, impulse = "daily_freq", response = "residuals", n.ahead = 24)
+plot(irf_vandalism1, sub = "")
+
+irf_vandalism2 <- irf(VAR_vandalism, impulse = "residuals", response = "daily_freq", n.ahead = 24)
+plot(irf_vandalism2, sub = "")
+
+```
+Maybe should try VEC
