@@ -98,7 +98,7 @@ Box.test(residual^2, type='Ljung-Box')
 # the residuals are homoscedastic; No ARCH effect
 # The Ljung-box test confirms that the residuals do not have heteroscedasticity because the p-values are very large.
 ```
-```{r ARCH test*}
+```{r ARCH test, eval=F}
 library(aTSA)
 aTSA::arch.test(dispute_diff_xts.fit)
 # The plots of residuals, squared residuals, p.values of PQ and LM tests 
@@ -112,11 +112,10 @@ dispute_archTest
 #we reject the null hypothesis and conclude the presence of ARCH(12) effects.
 ```
 
-```{r bayesGARCH}
+```{r bayesGARCH, eval=F}
 install.packages('bayesGARCH')
 library(bayesGARCH)
 MCMC <- bayesGARCH(dispute_diff_xts, ccontrol = list(n.chain=2, l.chain=100))
-
 ```
 
 ```{r EXP SMOOTHING}
@@ -235,7 +234,7 @@ dispute_struct_forec <- forecast(dispute_struct, h=14)
 # all forcast for 14 days
 par(mfrow=c(6,1))
 par(mar=c(1,1,1,1))
-plot(forecast(dispute_ar_auto,14))
+plot(forecast(dispute_ar_auto,14, bootstrap = T))
 plot(forecast(dispute_diff_xts.fit))
 plot(forecast(dispute_fitets))
 forecast:::plot.forecast(dispute_forecasts2)
