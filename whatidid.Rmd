@@ -113,9 +113,9 @@ dispute_archTest
 ```
 
 ```{r bayesGARCH, eval=F}
-install.packages('bayesGARCH')
 library(bayesGARCH)
-MCMC <- bayesGARCH(dispute_diff_xts, ccontrol = list(n.chain=2, l.chain=100))
+MCMC <- bayesGARCH(as.numeric(as.ts((dispute_diff_xts))), control = list(n.chain=2, l.chain=100))
+plot(MCMC)
 ```
 
 ```{r EXP SMOOTHING}
@@ -132,7 +132,7 @@ summary(dispute_fitets)
 autoplot(forecast.ets(dispute_fitets))
 # "ANN" is simple exponential smoothing with additive errors
 
-library('forecast')
+library(forecast)
 # predicting for next 14 days
 dispute_forecasts2 <- forecast:::forecast.HoltWinters(dispute_forecasts, h=14)
 #dispute_forecasts2
@@ -190,8 +190,8 @@ z <- read.zoo(dispute[])
 training <- window(z, start='2017-12-01', end='2020-05-17')
 testset <- window(z, start='2015-06-15', end='2017-11-29')
 
-training <- window(as.ts(dispute_diff_xts), end=33)
-testset <- window(as.ts(dispute_diff_xts), start=34)
+training <- window(as.ts(dispute_diff_xts), end=39)
+testset <- window(as.ts(dispute_diff_xts), start=40)
 
 fc <- function(y, h, xreg)
 {
@@ -203,7 +203,7 @@ fc <- function(y, h, xreg)
   forecast(fit, xreg=newX)
 }
 
-tsCV(y=training, f, xreg=testset)
+e <- tsCV(y=training, fc, xreg=testset)
 # error: results in NAs 
 
 autoplot(e)

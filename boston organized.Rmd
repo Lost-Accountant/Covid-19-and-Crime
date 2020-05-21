@@ -138,7 +138,7 @@ plot.xts(MA_res_ts,
 adf.test(as.ts(MA_res_ts))
 
 # lag residuals by 4 days due to testing time
-MA_res_lag <- lag.xts(MA_res_ts, k = 4)
+MA_res_lag <- stats::lag(MA_res_ts, k = -4)
 ```
 
 The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in Massachusetts, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
@@ -375,7 +375,7 @@ Possible for VAR
 
 ```{r VAR}
 # VAR model estimation
-VAR_dispute <- vars::VAR(y=na.omit(combined_diff), p = 10)
+VAR_dispute <- vars::VAR(y=as.ts(na.omit(combined_diff)), p = 10)
 
 # Granger Causality test
 summary(VAR_dispute)
@@ -396,6 +396,9 @@ plot(irf2, sub = "")
 VAR_dispute_forecast <- predict(VAR_dispute, n.ahead = 24)
 par(mai = c(0.4,0.4,0.5,0.1), cex.main = 0.8)
 plot(VAR_dispute_forecast)
+
+forecast(VAR_dispute) %>%
+  autoplot()
 
 ```
 
@@ -468,6 +471,7 @@ vandalism_diff_xts <- vandalism_diff_xts[paste(start(MA_res_ts),end(vandalism_di
 Unsual spikes in March.
 
 ### Vector Auto Regressive
+#### synced covid
 ```{r overlap 2 time series}
 # combine 2 time series
 combined_vandalism_diff <- merge(vandalism_diff_xts[paste(start(MA_res_ts),end(vandalism_diff_xts), sep = "/")],
@@ -494,7 +498,7 @@ VEC is probably not appropriate due to not having long-term relationship in natu
 
 ```{r VAR vandalism}
 # VAR model estimation
-VAR_vandalism <- vars::VAR(y=na.omit(combined_vandalism_diff), p = 10)
+VAR_vandalism <- vars::VAR(y=as.ts(na.omit(combined_vandalism_diff)), p = 10)
 
 # Granger Causality test
 summary(VAR_vandalism)
@@ -507,5 +511,24 @@ plot(irf_vandalism1, sub = "")
 irf_vandalism2 <- irf(VAR_vandalism, impulse = "residuals", response = "daily_freq", n.ahead = 24)
 plot(irf_vandalism2, sub = "")
 
+# tidy version of forecast
+forecast(VAR_vandalism) %>%
+  autoplot()
+
+# obtain forecast
+VAR_vandalism_forecast <- predict(VAR_vandalism, n.ahead = 24)
+par(mai = c(0.4,0.4,0.5,0.1), cex.main = 0.8)
+plot(VAR_vandalism_forecast)
+
 ```
-Maybe should try VEC
+
+Not much aside from proving that instantneous causality exists
+
+### Vector Error Correction
+```{r see long term relationship}
+combined_vandalism_diff %>%
+  ggplot(aes(x=residuals, y = daily_freq)) +
+  geom_smooth(method = "lm") +
+  geom_point()
+```
+Just some leverage points. cannot conclude long term linear relationship
