@@ -8,7 +8,6 @@ library(tidyverse)
 library(tsbox) # transform data into time series
 library(xts)
 library(COVID19) # to get data about covid 19
-library(aTSA) # adf.test
 library(forecast) #arima model
 library(vars) #VAR and Causality
 ```
@@ -27,12 +26,6 @@ boston <- boston %>%
 ```
 
 ```{r crime data info}
-# summary of all crime
-boston_summary <- boston %>%
-  group_by(OFFENSE_DESCRIPTION) %>%
-  summarise(number_of_crime = n()) %>%
-  arrange(desc(number_of_crime))
-
 length(unique(boston_summary$OFFENSE_DESCRIPTION))
 # number of crime categories: 283
 length(unique(boston$DISTRICT))
@@ -58,23 +51,6 @@ boston %>%
 ```
 
 ### Univariate Model
-### Extract verbal dispute
-```{r verbal dispute summary}
-# extract verbal dispute cases
-dispute <- boston %>%
-  filter(OFFENSE_DESCRIPTION == "VERBAL DISPUTE") %>%
-  group_by(date) %>%
-  summarise(daily_freq = n())
-
-# change colname name for time series
-colnames(dispute)[1] <- "time"
-
-# convert to xts time series
-dispute_xts <- ts_xts(dispute)
-
-dispute_diff_xts <- na.omit(diff(dispute_xts))
-
-```
 #### Simple AR model
 ```{r univariate model}
 # white noise test
@@ -151,6 +127,12 @@ plot(dispute_forecasts)
 dispute_forecasts$SSE
 # sum of squared error = 3657.46
 
+dispute_fitets <- ets(as.ts(dispute_diff_xts))
+checkresiduals(dispute_fitets)
+summary(dispute_fitets)
+autoplot(forecast.ets(dispute_fitets))
+# "ANN" is simple exponential smoothing with additive errors
+
 library('forecast')
 # predicting for next 14 days
 dispute_forecasts2 <- forecast:::forecast.HoltWinters(dispute_forecasts, h=14)
@@ -205,11 +187,12 @@ plotForecastErrors(dispute_forecasts2$residuals)
 autoplot(forecast(dispute_ar_auto, bootstrap = T))
 
 library(zoo)
-z <- read.zoo(dispute)
+z <- read.zoo(dispute[])
 training <- window(z, start='2017-12-01', end='2020-05-17')
 testset <- window(z, start='2015-06-15', end='2017-11-29')
-accuracy(dispute_ar_auto, test=testset)
-accuracy(dispute_ann, test=testset)
+
+training <- window(as.ts(dispute_diff_xts), end=33)
+testset <- window(as.ts(dispute_diff_xts), start=34)
 
 fc <- function(y, h, xreg)
 {
@@ -227,5 +210,54 @@ tsCV(y=training, f, xreg=testset)
 autoplot(e)
 sqrt(mean(e^2,na.rm = T))
 ```
+
+
+```{r}
+var_dispute.stabil <- vars::stability(x=VAR_dispute, type ="OLS-CUSUM", h = 0.15, dynamic = FALSE, rescale = TRUE)
+
+plot(var_dispute.stabil)
+# VAR is stable
+```
+
+```{r VAR}
+# select the optimal lag number within 10
+VARselect(na.omit(combined_diff), lag.max = 10, type = 'const')
+# LET'S USE 8
+
+# VAR model estimation
+VAR_dispute <- vars::VAR(y=na.omit(combined_diff), p = 8)
+```
+
+```{r FORECASTS FROM MODELS SUMMARY}
+dispute_struct <- StructTS(as.ts(dispute_diff_xts))
+dispute_struct_forec <- forecast(dispute_struct, h=14)
+
+# all forcast for 14 days
+par(mfrow=c(6,1))
+par(mar=c(1,1,1,1))
+plot(forecast(dispute_ar_auto,14))
+plot(forecast(dispute_diff_xts.fit))
+plot(forecast(dispute_fitets))
+forecast:::plot.forecast(dispute_forecasts2)
+plot(dispute_annm)
+plot(dispute_struct_forec)
+```
+
+```{r, warning=F}
+# model comparison
+accu_auto <- accuracy(dispute_ar_auto)
+accu_auto2 <- accuracy(dispute_diff_xts.fit)
+accu_ets <- accuracy(dispute_fitets)
+accu_hw <- accuracy(dispute_forecasts2)
+accu_ann <- accuracy(dispute_ann)
+accu_stru <- accuracy(dispute_struct_forec)
+
+model_compare <- data.frame(rbind(accu_auto, accu_auto2, accu_ets, accu_hw, accu_ann, accu_stru))
+rownames(model_compare) <- c('Auto ARIMA(0 mean)', 'Auto ARIMA', 'ETS','HoltWinters', 'Neural Net', 'Structural')
+kableExtra::kable(model_compare, format='markdown')
+```
+
+
+
 
 
