@@ -195,10 +195,12 @@ testset <- window(as.ts(dispute_diff_xts), start=40)
 
 fc <- function(y, h, xreg)
 {
-  X <- xreg[1:length(y),]
+  X <- window(xreg, start = 1, end = length(y))
+  #X <- xreg[1:length(y),]
   if(NROW(xreg) < length(y) + h)
     stop("Not enough xreg data for forecasting")
-  newX <- xreg[length(y)+(1:h),]
+  #newX <- window(xreg, start = length(y)+(1:h))
+  #newX <- xreg[length(y)+(1:h),]
   fit <- auto.arima(y, xreg=X)
   forecast(fit, xreg=newX)
 }
