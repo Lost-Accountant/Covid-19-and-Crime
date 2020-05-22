@@ -216,10 +216,189 @@ boston %>%
   scale_color_brewer(palette = "Set1") +
   ggtitle("Monthly frequency of top 5 crime in Boston in 2020")
 
+
+# day of the week
+boston %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
+  ggplot(aes(x = DAY_OF_WEEK, fill = DAY_OF_WEEK)) +
+  geom_bar(width = 0.5) +
+  facet_wrap(~ OFFENSE_DESCRIPTION)
+
 ```
 
 Many plots in different style about the top 5 most frequent crime in Boston.
 
+## VAR for top 5 crime
+### Step1 : Extract cases
+```{r extract cases}
+# extract top 5 crime
+top5crime <- boston %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
+  group_by(date, OFFENSE_DESCRIPTION) %>%
+  tally() %>%
+  spread(OFFENSE_DESCRIPTION, n)
+
+# rename columns
+colnames(top5crime) <- c("time",
+                         "investigate",
+                         "property damage",
+                         "medical",
+                         "vandalism",
+                         "dispute")
+
+# create date
+top5crime$time <- as.Date(top5crime$time,
+                          format = "%Y-%m-%d")
+# create time series
+top5crime_xts <- ts_xts(top5crime[,1:2])
+
+for (i in (3:ncol(top5crime))){
+  temp_xts <- ts_xts(top5crime[, c(1,i)])
+  top5crime_xts <- merge(top5crime_xts, temp_xts)
+}
+
+# extract difference, change per day
+top5crime_diff <- na.omit(diff(top5crime_xts))
+```
+### Step 2: Construct combined time series
+```{r top 5 crime VAR}
+# specify common time range
+# start from when covid was a thing
+# end with crime since it is manually updated
+common_time <- seq.Date(start(MA_res_ts), end(top5crime_diff), by = "day")
+
+# combine time series of crime and covid
+combined_diff <- merge(top5crime_diff[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")],
+                       MA_res_ts[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")])
+
+```
+### Step 3: Plot each crime with covid
+```{r plot together}
+for (i in 1:(ncol(combined_diff) - 1)){
+  plotrix::twoord.plot(common_time,
+                       combined_diff[,i],
+                       common_time,
+                       combined_diff$residuals,
+                       type = c("l","l"),
+                       xaxt = "n",
+                       rylab = "number of daily fluctuation of covid 19 cases",
+                       ylab = paste("daily change in", colnames(combined_diff)[i]))
+                       
+}
+```
+
+Many look very promising
+
+### Step 5: Construct VAR model
+```{r construct var}
+# standardized length
+p = 10
+
+VAR_investigate <- VAR(y=as.ts(combined_diff[,c(1,6)]), p=p)
+VAR_damage <- VAR(y=as.ts(combined_diff[,c(2,6)]), p=p)
+VAR_medical <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=p)
+VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=p)
+VAR_dispute <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=p)
+```
+
+
+### Step 6: Granger Causality test
+#### Investigate Person
+```{r granger investigate}
+# investigate person
+causality(VAR_investigate, cause = colnames(combined_diff)[1])
+causality(VAR_investigate, cause = "residuals")
+```
+covid significant to investigate person
+
+#### Property damange
+```{r granger property}
+# property damage
+causality(VAR_damage, cause = colnames(combined_diff)[2])
+causality(VAR_damage, cause = "residuals")
+```
+no relationship with property damage
+
+#### Medical attention
+```{r granger medical}
+# medical
+causality(VAR_medical, cause = colnames(combined_diff)[3])
+causality(VAR_medical, cause = "residuals")
+```
+no relationship with medical attention, strangely
+
+#### Vandalism
+```{r granger vandalism}
+# vandalism
+causality(VAR_vandalism, cause = colnames(combined_diff)[4])
+causality(VAR_vandalism, cause = "residuals")
+```
+
+Instantneous causality with vandalism
+
+#### Verbal dispute
+```{r granger dispute}
+# dispute
+causality(VAR_dispute, cause = colnames(combined_diff)[5])
+causality(VAR_dispute, cause = "residuals")
+
+```
+
+covid significant to verbal dispute
+
+### Step 7: Impulse Response Function
+
+Only investigate person and verbal dispute have granger causality.
+
+```{r irf}
+par(mfrow = c(1,2))
+# investigate person
+irf_investigate_1 <- irf(VAR_investigate, 
+                         impulse = "investigate", 
+                         response = "residuals", 
+                         n.ahead = 24)
+irf_investigate_2 <- irf(VAR_investigate, 
+                         impulse = "residuals", 
+                         response = "investigate", 
+                         n.ahead = 24)
+plot(irf_investigate_1)
+plot(irf_investigate_2)
+
+# verbal dispute
+irf_dispute_1 <- irf(VAR_dispute, 
+                         impulse = "dispute", 
+                         response = "residuals", 
+                         n.ahead = 24)
+irf_dispute_2 <- irf(VAR_dispute, 
+                         impulse = "residuals", 
+                         response = "dispute", 
+                         n.ahead = 24)
+plot(irf_dispute_1)
+plot(irf_dispute_2)
+```
+
+### Step 8: Forecast
+```{r var forecast}
+forecast(VAR_investigate) %>%
+  autoplot()
+
+forecast(VAR_dispute) %>%
+  autoplot()
+```
+### CONCLUSION
+Significant contribution on prediction:
+  Investigate person (week), verbal dispute
+
+Significant simultaneous movement:
+  Vandalism
+
+
+
+=== All followings are optional === 
 ## Verbal Dispute
 ### Summary with Visualization
 ```{r verbal dispute summary}
