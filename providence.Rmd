@@ -1,0 +1,18 @@
+---
+title: "Providence"
+author: "Zhengkai Fu"
+date: "21/05/2020"
+output: pdf_document
+---
+
+```{r library, message = FALSE, warning = FALSE}
+library("RSocrata")
+```
+
+
+# Providence Crime
+```{r get Providence data}
+providence <- read.socrata(
+  "https://data.providenceri.gov/resource/rz3y-pz8v.csv",
+  app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+```
