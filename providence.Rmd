@@ -7,12 +7,32 @@ output: pdf_document
 
 ```{r library, message = FALSE, warning = FALSE}
 library("RSocrata")
+library(tidyverse)
 ```
-
+# COVID 19
 
 # Providence Crime
+## Load crime data
 ```{r get Providence data}
 providence <- read.socrata(
   "https://data.providenceri.gov/resource/rz3y-pz8v.csv",
   app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+
+head(providence)
+
+# add date
+providence <- providence %>%
+  mutate(date = substr(reported_date, start = 1, stop = 10)) %>%
+  mutate(y_month  = substr(reported_date, start = 1, stop = 7))
+
+# extract most vague name of crime
+
+
+```
+
+## Overview of crime
+```{r summary}
+# summary of all crime
+providence_summary <- providence %>%
+  group_by()
 ```
