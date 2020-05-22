@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r library, message = FALSE, warning = FALSE}
-library("RSocrata")
+library(RSocrata)
 library(tidyverse)
 ```
 # COVID 19
@@ -26,7 +26,8 @@ providence <- providence %>%
   mutate(y_month  = substr(reported_date, start = 1, stop = 7))
 
 # extract most vague name of crime
-
+providence <- providence %>%
+  separate(offense_desc, c("crime", "detail_crime"), sep = ",")
 
 ```
 
