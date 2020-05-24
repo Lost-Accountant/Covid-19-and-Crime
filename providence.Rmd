@@ -35,5 +35,28 @@ providence <- providence %>%
 ```{r summary}
 # summary of all crime
 providence_summary <- providence %>%
-  group_by()
+  group_by(crime) %>%
+  summarise(number_of_crime = n()) %>%
+  arrange(desc(number_of_crime))
+
+providence_summary
+
+providence %>%
+  filter(crime %in% head(providence_summary$crime, 5)) %>%
+  ggplot(aes(x=crime)) +
+  geom_bar()
+
+# top 5 crime over time
+# monthly
+# not too many months anyways
+providence %>%
+  select(y_month, crime) %>%
+  filter(crime %in% head(providence_summary$crime, 5)) %>% 
+  count(y_month, crime) %>%
+  ggplot(aes(y_month, n, group = crime, fill = crime)) +
+  geom_area(size = 0.01, alpha = 0.5) + 
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  ggtitle("Frequency of top 5 crime in Providence")
+
+# daily
 ```
