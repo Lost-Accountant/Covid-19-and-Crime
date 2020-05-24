@@ -508,7 +508,7 @@ VAR_vandalism <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=3)
 ```
 
 ### Step 6: Granger Causality test
-#### offense
+
 ```{r granger offense}
 # offense
 causality(VAR_offense, cause = colnames(combined_diff)[1])
@@ -598,3 +598,6 @@ Significant contribution on prediction:
 
 Significant simultaneous movement:
   vehicle theft
+  
+==================================
+
