@@ -532,7 +532,7 @@ serial.test(VAR_vehicle) # autocorrelation in errors
 arch.test(VAR_vehicle)
 normality.test(VAR_vehicle)
 ```
-COVID-19 may help to predict vehicle thefts.
+COVID-19 may help to predict thefts from vehicle.
 Instantaneous causality appears when we include the current information of variables.
 
 ```{r granger thefts}
@@ -548,7 +548,7 @@ causality(VAR_vandalism, cause = "residuals")
 
 ### Step 7: Impulse Response Function
 
-Only vehicle theft and thefts have granger causality.
+Only thefts from vehicle and thefts have granger causality.
 
 ```{r irf}
 par(mfrow = c(1,2))
@@ -594,10 +594,10 @@ kableExtra::kable(accu_compare, format = 'markdown')
 
 ### CONCLUSION
 Significant contribution on prediction:
-  vehicle theft, thefts
+  thefts from vehicle, thefts
 
 Significant simultaneous movement:
-  vehicle theft
+  thefts from vehicle
   
 ==================================
 
