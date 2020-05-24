@@ -295,14 +295,17 @@ Many look very promising
 
 ### Step 5: Construct VAR model
 ```{r construct var}
-# standardized length
-p = 10
+VARselect(combined_diff[,c(1,6)], type = 'none', lag.max = 10)
+VARselect(combined_diff[,c(2,6)], type = 'none', lag.max = 10)
+VARselect(combined_diff[,c(3,6)], type = 'none', lag.max = 10)
+VARselect(combined_diff[,c(4,6)], type = 'none', lag.max = 10)
+VARselect(combined_diff[,c(5,6)], type = 'none', lag.max = 10)
 
-VAR_investigate <- VAR(y=as.ts(combined_diff[,c(1,6)]), p=p)
-VAR_damage <- VAR(y=as.ts(combined_diff[,c(2,6)]), p=p)
-VAR_medical <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=p)
-VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=p)
-VAR_dispute <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=p)
+VAR_investigate <- VAR(y=as.ts(combined_diff[,c(1,6)]), p=8)
+VAR_damage <- VAR(y=as.ts(combined_diff[,c(2,6)]), p=3)
+VAR_medical <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=7)
+VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=2)
+VAR_dispute <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=3)
 ```
 
 
@@ -388,6 +391,12 @@ forecast(VAR_investigate) %>%
 
 forecast(VAR_dispute) %>%
   autoplot()
+
+accu_compare <- data.frame(rbind(accuracy(VAR_dispute$varresult[[1]]),
+                                 accuracy(VAR_investigate$varresult[[1]]),
+                                 accuracy(VAR_vandalism$varresult[[1]])))
+rownames(accu_compare) <- c('dispute', 'investigate', 'vandalism')
+kableExtra::kable(accu_compare, format = 'markdown')
 ```
 ### CONCLUSION
 Significant contribution on prediction:
