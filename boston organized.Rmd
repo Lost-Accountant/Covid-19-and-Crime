@@ -146,7 +146,7 @@ The residuals obtained here represents the fluctuation of daily confirmed cases 
 # Boston Crime
 ## Load crime data
 ```{r load crime data}
-boston <- utils::read.csv('boston.csv')
+boston <- read.csv("https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmp6p2g5goi.csv")
 head(boston)
 
 # add date

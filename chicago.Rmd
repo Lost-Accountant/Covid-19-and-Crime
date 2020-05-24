@@ -1,0 +1,41 @@
+---
+title: "Chicago"
+author: "Zhengkai Fu"
+date: "23/05/2020"
+output: html_document
+---
+
+```{r library, message = FALSE, warning = FALSE}
+library(RSocrata)
+library(tidyverse)
+```
+
+# Chicago Crime
+## Load crime data
+### FULL DATA, RUN AT OWN RISK
+```{r get chicago data, 2001 - 2020}
+chicago_full <- read.socrata(
+  "https://data.cityofchicago.org/resource/ijzp-q8t2.csv",
+  app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+
+head(chicago_full)
+
+# add date
+chicago_full <- chicago_full %>%
+  mutate(date = substr(Date, start = 1, stop = 10)) %>%
+  mutate(y_month  = substr(Date, start = 1, stop = 7))
+
+```
+### 2020 ONLY
+```{r get chicago data, 2020 only}
+chicago <- read.socrata(
+  "https://data.cityofchicago.org/resource/qzdf-xmn8.csv",
+  app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+
+head(chicago)
+
+# add date
+chicago <- chicago %>%
+  mutate(date = substr(Date, start = 1, stop = 10)) %>%
+  mutate(y_month  = substr(Date, start = 1, stop = 7))
+```
