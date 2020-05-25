@@ -1,0 +1,271 @@
+---
+title: "LA"
+author: "Zhuyi Huang"
+output: pdf_document
+---
+### 2020 ONLY
+```{r get LA data, 2020 only}
+LA <- read.socrata(
+  'http://data.lacity.org/resource/2nrs-mtv8.csv',
+  app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+
+head(LA)
+
+# add date
+LA <- LA %>%
+  mutate(y_month  = substr(date_occ, start = 1, stop = 7)) %>%
+  mutate(MONTH = substr(date_occ, start = 7, stop = 7))
+```
+
+```{r}
+# summary of all crime
+LA_summary <- LA %>%
+  group_by(crm_cd_desc) %>%
+  summarise(number_of_crime = n()) %>%
+  arrange(desc(number_of_crime))
+
+# bar chart of 5 most frequent crime over the years
+LA %>%
+  filter(crm_cd_desc %in% head(LA_summary$crm_cd_desc, 5)) %>%
+  ggplot(aes(x=crm_cd_desc, fill=crm_cd_desc)) +
+  geom_bar(width = 0.5) +
+  coord_flip() +
+  theme_classic() +
+  labs(y='Number of Crimes',x='Offense Description')
+
+# per month
+# exclude May
+LA %>%
+  dplyr::select(MONTH, crm_cd_desc) %>%
+  filter(crm_cd_desc %in% LA_summary$crm_cd_desc[1:5], MONTH != 05) %>% 
+  count(MONTH, crm_cd_desc) %>%
+  ggplot(aes(MONTH, n, group = crm_cd_desc, color = crm_cd_desc)) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1") +
+  ggtitle("Monthly frequency of top 5 crime in LA in 2020")
+
+# This dataset doesn't have 'day of the week' yet.
+```
+
+## VAR 
+### Step1 : Extract cases
+```{r extract cases}
+# extract top 5 crime
+top5crime <- LA %>%
+  filter(crm_cd_desc %in% head(LA_summary$crm_cd_desc, 5)) %>%
+  group_by(date_occ, crm_cd_desc) %>%
+  tally() %>%
+  spread(crm_cd_desc, n)
+
+# rename columns
+colnames(top5crime) <- c('time',
+                         "battery",
+                         "burglary",
+                         'burglary from vehicle',
+                         "vandalism",
+                         'vehicle')
+# create date
+top5crime$time <- as.Date(top5crime$time,
+                          format = "%Y-%m-%d")
+top5crime <- na.omit(top5crime)
+# create time series
+top5crime_xts <- ts_xts(top5crime[,1:2])
+
+for (i in (3:ncol(top5crime))){
+  temp_xts <- ts_xts(top5crime[, c(1,i)])
+  top5crime_xts <- merge(top5crime_xts, temp_xts)
+}
+
+# extract difference, change per day
+top5crime_diff <- na.omit(diff(top5crime_xts))
+```
+
+### Step 2: Construct combined time series
+## COVID 19 RELATED
+```{r covid 19 extract Pennsylvania data}
+# extract Pennsylvania data from US data. 
+covid19_CA <- covid19("USA", level = 2) %>%
+  filter(administrative_area_level_2 == "California") %>%
+  # filter out days when confirmed is zero
+  filter(confirmed > 0)
+
+# calculate the difference per day
+covid19_CA_diff <- data.frame(diff(covid19_CA$confirmed))
+colnames(covid19_CA_diff)[1] = "confirmed"
+covid19_CA_diff$date = covid19_CA$date[2:length(covid19_CA$date)]
+
+head(covid19_CA)
+```
+
+```{r covid 19 related exploration}
+# extract for tranforming into time series data
+ts_CA <- covid19_CA %>% 
+  dplyr::select(date, confirmed) %>%
+  ts_xts()
+
+# plot time series of IL infection
+ts_plot(ts_CA)
+# conduct ADF Test
+adf.test(as.ts(ts_CA))
+# not stationary!
+
+# try first log difference
+ts_diff_CA <- diff(ts_CA)
+ts_plot(ts_diff_CA)
+# still clearly not stationary
+# need de-trend
+
+# de-trend 
+# GAMM model from STA303 A3
+
+# time as integer
+covid19_CA_diff$timeInt = as.numeric(covid19_CA_diff$date)
+# make a copy to avoid perfect collinearity
+covid19_CA_diff$timeIid = covid19_CA_diff$timeInt
+
+# make a copy to avoid perfect collinearity
+covid19_CA_diff$timeIid = covid19_CA_diff$timeInt
+
+# GAMM model
+# 50 too overfit. 15 looks decent
+gamCA <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
+	data=covid19_CA_diff, family=poisson(link='log'))
+
+lme4::VarCorr(gamCA$mer)
+# looks like random intercept is making little difference.
+# choose to not have random effect to preserve it for time series analysis
+
+# plot fitted value
+toPredict = data.frame(time = seq(covid19_CA_diff$date[1], 
+                                          covid19_CA_diff$date[length(covid19_CA_diff$date)],
+                                  by = '1 day'))
+toPredict$timeInt = as.numeric(toPredict$time)
+
+# plot
+
+matplot(toPredict$time, 
+        exp(do.call(cbind, mgcv::predict.gam(gamCA$gam, toPredict, se.fit=TRUE)) %*% 
+              Pmisc::ciMat()), 
+        col='black', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='count', 
+        ylim = c(0.5, 5000), xlim = as.Date(c(covid19_CA$date[1], covid19_CA$date[length(covid19_CA$date)])))
+
+# obtain forecast
+forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamIL$gam, toPredict, se.fit=TRUE))))
+
+# access residuals
+CA_res <- data.frame(covid19_CA_diff$confirmed - forecast$fit)
+
+# transform into time series
+CA_res$time = covid19_CA_diff$date
+colnames(CA_res)[1] = "residuals"
+
+col_order <- c("time", "residuals")
+CA_res <- CA_res[, col_order]
+
+CA_res_ts <- ts_xts(CA_res)
+
+plot.xts(CA_res_ts)
+# adf test
+adf.test(as.ts(CA_res_ts))
+# Stationary process
+```
+
+```{r top 5 crime VAR}
+# specify common time range
+# start from when covid was a thing
+# end with crime since it is manually updated
+common_time <- seq.Date(start(CA_res_ts), end(top5crime_diff), by = "day")
+
+# combine time series of crime and covid
+combined_diff <- merge(top5crime_diff[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")],
+                       CA_res_ts[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")])
+
+```
+
+### Step 3: Plot each crime with covid
+```{r plot together}
+for (i in 1:(ncol(combined_diff) - 1)){
+  plotrix::twoord.plot(common_time,
+                       combined_diff[,i],
+                       common_time,
+                       combined_diff$residuals,
+                       type = c("l","l"),
+                       xaxt = "n",
+                       rylab = "number of daily fluctuation of covid 19 cases",
+                       ylab = paste("daily change in", colnames(combined_diff)[i]))
+                       
+}
+```
+
+### Step 5: Construct VAR model
+```{r construct var}
+VARselect(na.omit(combined_diff)[,c(1,6)], type = 'none', lag.max = 10)
+VARselect(na.omit(combined_diff)[,c(2,6)], type = 'none', lag.max = 10)
+VARselect(na.omit(combined_diff)[,c(3,6)], type = 'none', lag.max = 10)
+VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
+VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
+
+VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=2)
+VAR_burglary <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=6)
+VAR_burglary_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]), p=1)
+VAR_vandalism <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]), p=1)
+VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=1)
+```
+
+### Step 6: Granger Causality test
+
+```{r granger offense}
+causality(VAR_battery, cause = colnames(combined_diff)[1])
+causality(VAR_battery, cause = "residuals")
+```
+COVID-19 may help to predict battery - simple assault.
+
+```{r}
+causality(VAR_burglary, cause = colnames(combined_diff)[2])
+causality(VAR_burglary, cause = "residuals")
+```
+instantaneous causality between: residuals and burglary
+
+```{r}
+causality(VAR_burglary_vehicle, cause = colnames(combined_diff)[3])
+causality(VAR_burglary_vehicle, cause = "residuals")
+```
+burglary.from.vehicle Granger-cause residuals, weirdly.
+
+```{r}
+causality(VAR_vandalism, cause = colnames(combined_diff)[4])
+causality(VAR_vandalism, cause = "residuals")
+```
+```{r}
+causality(VAR_vehicle, cause = colnames(combined_diff)[5])
+causality(VAR_vehicle, cause = "residuals")
+```
+### Step 7: Impulse Response Function
+
+Only 'battery - simple assault' have granger causality.
+
+```{r irf}
+par(mfrow = c(1,2))
+irf_battery_1 <- irf(VAR_battery, 
+                         impulse = "battery", 
+                         response = "residuals", 
+                         n.ahead = 24)
+irf_battery_2 <- irf(VAR_battery, 
+                         impulse = "residuals", 
+                         response = "battery", 
+                         n.ahead = 24)
+plot(irf_battery_1)
+plot(irf_battery_2)
+```
+### CONCLUSION
+Significant contribution on prediction:
+  'battery - simple assault'
+
+Significant simultaneous movement:
+  burglary
+  
+==================================
