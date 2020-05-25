@@ -37,5 +37,296 @@ head(chicago)
 # add date
 chicago <- chicago %>%
   mutate(date = substr(Date, start = 1, stop = 10)) %>%
-  mutate(y_month  = substr(Date, start = 1, stop = 7))
+  mutate(y_month  = substr(Date, start = 1, stop = 7)) %>%
+  mutate(MONTH = substr(Date, start = 7, stop = 7))
 ```
+
+```{r}
+# summary of all crime
+chicago_summary <- chicago %>%
+  group_by(Primary.Type) %>%
+  summarise(number_of_crime = n()) %>%
+  arrange(desc(number_of_crime))
+
+# bar chart of 5 most frequent crime over the years
+chicago %>%
+  filter(Primary.Type %in% head(chicago_summary$Primary.Type, 5)) %>%
+  ggplot(aes(x=Primary.Type, fill=Primary.Type)) +
+  geom_bar(width = 0.5) +
+  coord_flip() +
+  theme_classic() +
+  labs(y='Number of Crimes',x='Offense Description')
+
+# per month
+# exclude May
+chicago %>%
+  dplyr::select(MONTH, Primary.Type) %>%
+  filter(Primary.Type %in% chicago_summary$Primary.Type[1:5], MONTH != 05) %>% 
+  count(MONTH, Primary.Type) %>%
+  ggplot(aes(MONTH, n, group = Primary.Type, color = Primary.Type)) +
+  geom_line() +
+  scale_color_brewer(ILlette = "Set1") +
+  ggtitle("Monthly frequency of top 5 crime in chicago in 2020")
+
+# This dataset doesn't have 'day of the week' yet.
+```
+
+## VAR 
+### Step1 : Extract cases
+```{r extract cases}
+# extract top 5 crime
+top5crime <- chicago %>%
+  filter(Primary.Type %in% head(chicago_summary$Primary.Type, 5)) %>%
+  group_by(date, Primary.Type) %>%
+  tally() %>%
+  spread(Primary.Type, n)
+
+# rename columns
+colnames(top5crime) <- c('time',
+                         "assault",
+                         "battery",
+                         "criminal",
+                         'deceptive',
+                         "theft")
+top5crime <- na.omit(top5crime)
+# create time series
+top5crime_xts <- ts_xts(top5crime[,1:2])
+
+for (i in (3:ncol(top5crime))){
+  temp_xts <- ts_xts(top5crime[, c(1,i)])
+  top5crime_xts <- merge(top5crime_xts, temp_xts)
+}
+
+# extract difference, change per day
+top5crime_diff <- na.omit(diff(top5crime_xts))
+```
+
+### Step 2: Construct combined time series
+## COVID 19 RELATED
+```{r covid 19 extract Pennsylvania data}
+# extract Pennsylvania data from US data. 
+covid19_IL <- covid19("USA", level = 2) %>%
+  filter(administrative_area_level_2 == "Illinois") %>%
+  # filter out days when confirmed is zero
+  filter(confirmed > 0)
+
+# calculate the difference per day
+covid19_IL_diff <- data.frame(diff(covid19_IL$confirmed))
+colnames(covid19_IL_diff)[1] = "confirmed"
+covid19_IL_diff$date = covid19_IL$date[2:length(covid19_IL$date)]
+
+head(covid19_IL)
+```
+
+```{r covid 19 related exploration}
+# extract for tranforming into time series data
+ts_IL <- covid19_IL %>% 
+  dplyr::select(date, confirmed) %>%
+  ts_xts()
+
+# plot time series of IL infection
+ts_plot(ts_IL)
+# conduct ADF Test
+adf.test(as.ts(ts_IL))
+# not stationary!
+
+# try first log difference
+ts_diff_IL <- diff(ts_IL)
+ts_plot(ts_diff_IL)
+# still clearly not stationary
+# need de-trend
+
+# de-trend 
+# GAMM model from STA303 A3
+
+# time as integer
+covid19_IL_diff$timeInt = as.numeric(covid19_IL_diff$date)
+# make a copy to avoid perfect collinearity
+covid19_IL_diff$timeIid = covid19_IL_diff$timeInt
+
+# make a copy to avoid perfect collinearity
+covid19_IL_diff$timeIid = covid19_IL_diff$timeInt
+
+# GAMM model
+# 50 too overfit. 15 looks decent
+gamIL <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
+	data=covid19_IL_diff, family=poisson(link='log'))
+
+lme4::VarCorr(gamIL$mer)
+# looks like random intercept is making little difference.
+# choose to not have random effect to preserve it for time series analysis
+
+# plot fitted value
+toPredict = data.frame(time = seq(covid19_IL_diff$date[1], 
+                                          covid19_IL_diff$date[length(covid19_IL_diff$date)],
+                                  by = '1 day'))
+toPredict$timeInt = as.numeric(toPredict$time)
+
+# plot
+
+matplot(toPredict$time, 
+        exp(do.call(cbind, mgcv::predict.gam(gamIL$gam, toPredict, se.fit=TRUE)) %*% 
+              Pmisc::ciMat()), 
+        col='black', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='count', 
+        ylim = c(0.5, 5000), xlim = as.Date(c(covid19_IL$date[1], covid19_IL$date[length(covid19_IL$date)])))
+
+# obtain forecast
+forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamIL$gam, toPredict, se.fit=TRUE))))
+
+# access residuals
+IL_res <- data.frame(covid19_IL_diff$confirmed - forecast$fit)
+
+# transform into time series
+IL_res$time = covid19_IL_diff$date
+colnames(IL_res)[1] = "residuals"
+
+col_order <- c("time", "residuals")
+IL_res <- IL_res[, col_order]
+
+IL_res_ts <- ts_xts(IL_res)
+
+plot.xts(IL_res_ts)
+# adf test
+adf.test(as.ts(IL_res_ts))
+# Stationary process
+```
+
+```{r top 5 crime VAR}
+# specify common time range
+# start from when covid was a thing
+# end with crime since it is manually updated
+common_time <- seq.Date(start(IL_res_ts), end(top5crime_diff), by = "day")
+
+# combine time series of crime and covid
+combined_diff <- merge(top5crime_diff[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")],
+                       IL_res_ts[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")])
+
+```
+
+### Step 3: Plot each crime with covid
+```{r plot together}
+for (i in 1:(ncol(combined_diff) - 1)){
+  plotrix::twoord.plot(common_time,
+                       combined_diff[,i],
+                       common_time,
+                       combined_diff$residuals,
+                       type = c("l","l"),
+                       xaxt = "n",
+                       rylab = "number of daily fluctuation of covid 19 cases",
+                       ylab = paste("daily change in", colnames(combined_diff)[i]))
+                       
+}
+```
+
+### Step 5: Construct VAR model
+```{r construct var}
+VARselect(na.omit(combined_diff)[,c(1,6)], type = 'none', lag.max = 10)
+VARselect(na.omit(combined_diff)[,c(2,6)], type = 'none', lag.max = 10)
+VARselect(na.omit(combined_diff)[,c(3,6)], type = 'none', lag.max = 10)
+VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
+VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
+
+VAR_assault <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=5)
+VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=1)
+VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]), p=4)
+VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]), p=6)
+VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=5)
+```
+
+### Step 6: Granger Causality test
+
+```{r}
+causality(VAR_assault, cause = colnames(combined_diff)[1])
+causality(VAR_assault, cause = "residuals")
+```
+COVID-19 may help to predict assault.
+
+```{r}
+causality(VAR_battery, cause = colnames(combined_diff)[2])
+causality(VAR_battery, cause = "residuals")
+```
+```{r}
+causality(VAR_criminal, cause = colnames(combined_diff)[3])
+causality(VAR_criminal, cause = "residuals")
+```
+
+```{r}
+causality(VAR_deceptive, cause = colnames(combined_diff)[4])
+causality(VAR_deceptive, cause = "residuals")
+```
+
+```{r}
+causality(VAR_theft, cause = colnames(combined_diff)[5])
+causality(VAR_theft, cause = "residuals")
+```
+
+COVID-19 may help to predict theft.
+Instantaneous causality appears when we include the current information of variables.
+
+```{r}
+vehicle <- chicago %>%
+  filter(Primary.Type == 'MOTOR VEHICLE THEFT')%>%
+  group_by(date, Primary.Type) %>%
+  tally() %>%
+  spread(Primary.Type, n)
+
+colnames(vehicle) <- c('time', 'vehicle')
+vehicle_xts <- ts_xts(vehicle[,1:2])
+vehicle_diff <- na.omit(diff(vehicle_xts))
+```
+
+```{r}
+combined_diff2 <- merge(vehicle_diff[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")],
+                       IL_res_ts[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")])
+VARselect(na.omit(combined_diff2)[,c(1,2)], type = 'none', lag.max = 10)
+VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff2)[,c(1,2)]), p=4)
+
+causality(VAR_vehicle, cause = colnames(combined_diff2)[1])
+causality(VAR_vehicle, cause = "residuals")
+```
+
+### Step 7: Impulse Response Function
+
+Only assault and theft have granger causality.
+
+```{r irf}
+par(mfrow = c(1,2))
+irf_assault_1 <- irf(VAR_assault, 
+                         impulse = "assault", 
+                         response = "residuals", 
+                         n.ahead = 24)
+irf_assault_2 <- irf(VAR_assault, 
+                         impulse = "residuals", 
+                         response = "assault", 
+                         n.ahead = 24)
+plot(irf_assault_1)
+plot(irf_assault_2)
+
+# theft
+irf_theft_1 <- irf(VAR_theft, 
+                         impulse = "theft", 
+                         response = "residuals", 
+                         n.ahead = 24)
+irf_theft_2 <- irf(VAR_theft, 
+                         impulse = "residuals", 
+                         response = "theft", 
+                         n.ahead = 24)
+plot(irf_theft_1)
+plot(irf_theft_2)
+```
+### CONCLUSION
+Significant contribution on prediction:
+  assault, theft
+
+Significant simultaneous movement:
+  theft
+  
+==================================
