@@ -65,7 +65,7 @@ chicago %>%
   count(MONTH, Primary.Type) %>%
   ggplot(aes(MONTH, n, group = Primary.Type, color = Primary.Type)) +
   geom_line() +
-  scale_color_brewer(ILlette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
   ggtitle("Monthly frequency of top 5 crime in chicago in 2020")
 
 # This dataset doesn't have 'day of the week' yet.
