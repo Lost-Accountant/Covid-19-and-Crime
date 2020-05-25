@@ -8,9 +8,136 @@ output: pdf_document
 ```{r library, message = FALSE, warning = FALSE}
 library(RSocrata)
 library(tidyverse)
+library(tsbox) # transform data into time series
+library(xts)
+library(COVID19) # to get data about covid 19
+library(aTSA) # adf.test
+library(forecast) #arima model
+library(vars) #VAR and Causality
 ```
 # COVID 19
+## Load COVID 19 data for Massachusetts
+```{r covid 19 for MA}
+# extract MA data from US data. level 3 is by cities but cannot find Boston.
+covid19_MA <- covid19("USA", level = 2) %>%
+  filter(state == "Massachusetts") %>%
+  # filter out days when confirmed is zero or one
+  # becasue when it was 1 for a very long time
+  filter(confirmed > 1)
 
+# brief display
+head(covid19_MA)
+```
+### Choice explained
+
+#### Scope of data
+
+The covid 19 data related to the whole state of Massachusetts are chosen, because the auther believes that suburban area and capital city are closely related in the context of disease and crime. It is well known that in America most of the residential area, suburban or rual area, is separately identifiable from commercial zone, the cities. While the crime might have happened in the city of Boston, the suspects or victims might live outside of Boston.
+
+#### Confirmed cases instead of Death count
+
+Although the number of confirmed cases can largely be influenced by the testing policy of the local government, the psychological effects of seeing confirmed cases alone might be enough to have some psychological relationship with committing crimes, which is what the author would like to explore.
+
+## Overview of the data
+### Visualization
+```{r overview of covid, message=FALSE}
+# plot cumulative cases
+# extract for tranforming into time series data
+ts_MA <- covid19_MA %>% 
+  dplyr::select(date, confirmed) %>%
+  ts_xts()
+
+plot.xts(ts_MA,
+         main = "Cumulative confirmed cases 
+         of COVID19 in Boston")
+
+# plot daily cases
+# first difference
+ts_diff_MA <- diff(ts_MA)
+plot.xts(ts_diff_MA,
+         main = "Daily confirmed cases of
+         COVID19 in Boston")
+```
+
+As shown above, cumulative cases and daily cases have been plotted above.
+
+### Model the infection
+#### Construct the model
+```{r GAMM model for covid}
+# construct GAMM model from prof. Brown's work
+
+# construct data frame of difference, not time series
+covid19_MA_diff <- data.frame(diff(covid19_MA$confirmed))
+colnames(covid19_MA_diff)[1] = "confirmed"
+covid19_MA_diff$date = covid19_MA$date[2:length(covid19_MA$date)]
+
+# time as integer
+covid19_MA_diff$timeInt = as.numeric(covid19_MA_diff$date)
+# make a copy to avoid perfect collinearity for mixed effect
+covid19_MA_diff$timeIid = covid19_MA_diff$timeInt
+
+# GAMM model
+gamMA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 70), 
+                      random = ~(1|timeIid),
+                      data = covid19_MA_diff,
+                      family = poisson(link = 'log'))
+# currently 70 is the max due to length of data
+```
+
+In order to study covid19's impact on Boston, its trend needs to be modeled first to have a better understanding of the situation. A Generalized Additive Mixed Model is used here, which is a direct copy from prof. Patrick Brown's work in STA303 Assignment 3.
+
+#### Visuzalization of the model
+```{r plot GAMM}
+# plot fitted value
+toPredict = data.frame(time = seq(covid19_MA_diff$date[1], 
+                                          covid19_MA_diff$date[length(covid19_MA_diff$date)],
+                                  by = '1 day'))
+toPredict$timeInt = as.numeric(toPredict$time)
+
+# plot
+
+matplot(toPredict$time, 
+        exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE)) %*% 
+              Pmisc::ciMat()), 
+        col='red', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='Daliy Confirmed cases', 
+        ylim = c(0.5, 3500), xlim = as.Date(c(covid19_MA$date[1], covid19_MA$date[length(covid19_MA$date)])))
+title("Daily confirmed cases of COVID 19 in Boston")
+
+matpoints(toPredict$time, covid19_MA_diff$confirmed, 
+          col = 'black',
+          type = 'l')
+```
+The overall trend of the covid 19 infection in Boston is successfully modeled and displayed above, including a 95% confidence interval. However, those are not very important. Now let's take a look at crime situation in Boston.
+
+#### Obtain the residuals
+```{r covid 19 residual}
+# obtain forecast
+forecast_covid <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE))))
+                        
+                        
+# access residuals
+MA_res <- data.frame(covid19_MA_diff$confirmed - forecast_covid$fit)
+
+# transform into time series
+MA_res$time = covid19_MA_diff$date
+colnames(MA_res)[1] = "residuals"
+
+col_order <- c("time", "residuals")
+MA_res <- MA_res[, col_order]
+
+MA_res_ts <- ts_xts(MA_res)
+
+plot.xts(MA_res_ts,
+         main = "Daily fluctuation of COVID 19 confirmd cases
+         in MA outside its overall trend")
+# adf test
+adf.test(as.ts(MA_res_ts))
+
+# lag residuals by 4 days due to testing time
+MA_res_lag <- stats::lag(MA_res_ts, k = -4)
+```
+
+The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in Massachusetts, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
 # Providence Crime
 ## Load crime data
 ```{r get Providence data}
@@ -50,13 +177,104 @@ providence %>%
 # monthly
 # not too many months anyways
 providence %>%
-  select(y_month, crime) %>%
+  dplyr::select(y_month, crime) %>%
   filter(crime %in% head(providence_summary$crime, 5)) %>% 
   count(y_month, crime) %>%
-  ggplot(aes(y_month, n, group = crime, fill = crime)) +
-  geom_area(size = 0.01, alpha = 0.5) + 
+  ggplot(aes(y_month, n, group = crime, color = crime)) +
+  geom_line() + 
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$OFFENSE_DESCRIPTION[1:5]))) +
   ggtitle("Frequency of top 5 crime in Providence")
 
 # daily
+providence %>%
+  dplyr::select(date, crime) %>%
+  filter(crime %in% head(providence_summary$crime, 5)) %>% 
+  count(date, crime) %>%
+  ggplot(aes(date, n, group = crime, color = crime)) +
+  geom_line() + 
+  facet_wrap(~crime) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  ggtitle("Frequency of top 5 crime in Providence")
+```
+
+
+## VAR for top 5 crime
+### Step 1: Extract cases
+```{r extract cases}
+# extract top 5 cases
+top5crime <- providence %>%
+  filter(crime %in% head(providence_summary$crime,5)) %>%
+  group_by(date, crime) %>%
+  tally() %>%
+  spread(crime, n)
+
+# replace NA with 0
+top5crime[is.na(top5crime)] = 0
+
+# rename columns
+colnames(top5crime) <- c("time",
+                         "assault",
+                         "larceny",
+                         "larceny_from_vehicle",
+                         "missing",
+                         "vandalism")
+
+# create date
+top5crime$time <- as.Date(top5crime$time,
+                          format = "%Y-%m-%d")
+
+# create time series
+top5crime_xts <- ts_xts(top5crime[,1:2])
+
+for (i in (3:ncol(top5crime))){
+  temp_xts <- ts_xts(top5crime[, c(1,i)])
+  top5crime_xts <- merge(top5crime_xts, temp_xts)
+}
+
+# extract difference, change per day
+top5crime_diff <- na.omit(diff(top5crime_xts))
+```
+
+### Step 2: Construct combined time series
+```{r top 5 crime VAR}
+# specify common time range
+# start from when covid was a thing
+# end with crime since it is manually updated
+common_time <- seq.Date(start(MA_res_ts), end(top5crime_diff), by = "day")
+
+# combine time series of crime and covid
+combined_diff <- merge(top5crime_diff[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")],
+                       MA_res_ts[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")])
+
+```
+
+### Step 3: Plot each crime with covid
+```{r plot together}
+for (i in 1:(ncol(combined_diff) - 1)){
+  plotrix::twoord.plot(common_time,
+                       combined_diff[,i],
+                       common_time,
+                       combined_diff$residuals,
+                       type = c("l","l"),
+                       xaxt = "n",
+                       rylab = "number of daily fluctuation of covid 19 cases",
+                       ylab = paste("daily change in", colnames(combined_diff)[i]))
+                       
+}
+```
+
+Many look very promising
+
+### Step 5: Construct VAR model
+```{r construct var}
+# variable selection based on AIC
+VARselect(combined_diff[,c(1,6)], type = 'none', lag.max = 10)
+VARselect(combined_diff[,c(2,6)], type = 'none', lag.max = 10)
+VARselect(combined_diff[,c(3,6)], type = 'none', lag.max = 10)
+VARselect(combined_diff[,c(4,6)], type = 'none', lag.max = 10)
+VARselect(combined_diff[,c(5,6)], type = 'none', lag.max = 10)
 ```

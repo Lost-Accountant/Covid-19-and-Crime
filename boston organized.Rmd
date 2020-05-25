@@ -295,15 +295,17 @@ Many look very promising
 
 ### Step 5: Construct VAR model
 ```{r construct var}
+# variable selection based on AIC
 VARselect(combined_diff[,c(1,6)], type = 'none', lag.max = 10)
 VARselect(combined_diff[,c(2,6)], type = 'none', lag.max = 10)
 VARselect(combined_diff[,c(3,6)], type = 'none', lag.max = 10)
 VARselect(combined_diff[,c(4,6)], type = 'none', lag.max = 10)
 VARselect(combined_diff[,c(5,6)], type = 'none', lag.max = 10)
 
+# construct the model based on smallest AIC
 VAR_investigate <- VAR(y=as.ts(combined_diff[,c(1,6)]), p=8)
 VAR_damage <- VAR(y=as.ts(combined_diff[,c(2,6)]), p=3)
-VAR_medical <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=7)
+VAR_medical <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=2)
 VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=2)
 VAR_dispute <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=3)
 ```
@@ -316,7 +318,7 @@ VAR_dispute <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=3)
 causality(VAR_investigate, cause = colnames(combined_diff)[1])
 causality(VAR_investigate, cause = "residuals")
 ```
-covid significant to investigate person
+covid NOT significant to investigate person
 
 #### Property damange
 ```{r granger property}
@@ -324,7 +326,7 @@ covid significant to investigate person
 causality(VAR_damage, cause = colnames(combined_diff)[2])
 causality(VAR_damage, cause = "residuals")
 ```
-no relationship with property damage
+covid significant with property damage
 
 #### Medical attention
 ```{r granger medical}
@@ -340,8 +342,7 @@ no relationship with medical attention, strangely
 causality(VAR_vandalism, cause = colnames(combined_diff)[4])
 causality(VAR_vandalism, cause = "residuals")
 ```
-
-Instantneous causality with vandalism
+no causality. almost weak instantneous causality
 
 #### Verbal dispute
 ```{r granger dispute}
@@ -355,21 +356,21 @@ covid significant to verbal dispute
 
 ### Step 7: Impulse Response Function
 
-Only investigate person and verbal dispute have granger causality.
+Only properety damange and verbal dispute have granger causality.
 
 ```{r irf}
 par(mfrow = c(1,2))
 # investigate person
-irf_investigate_1 <- irf(VAR_investigate, 
-                         impulse = "investigate", 
+irf_damage_1 <- irf(VAR_damage, 
+                         impulse = "property.damage", 
                          response = "residuals", 
                          n.ahead = 24)
-irf_investigate_2 <- irf(VAR_investigate, 
+irf_damage_2 <- irf(VAR_damage, 
                          impulse = "residuals", 
-                         response = "investigate", 
+                         response = "property.damage", 
                          n.ahead = 24)
-plot(irf_investigate_1)
-plot(irf_investigate_2)
+plot(irf_damage_1)
+plot(irf_damage_2)
 
 # verbal dispute
 irf_dispute_1 <- irf(VAR_dispute, 
