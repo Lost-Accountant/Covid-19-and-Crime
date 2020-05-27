@@ -67,7 +67,7 @@ As shown above, cumulative cases and daily cases have been plotted above.
 # construct GAMM model from prof. Brown's work
 
 # construct data frame of difference, not time series
-covid19_RI_diff <- data.frame(diff(covid19_RI$confirmed)) %>%
+covid19_RI_diff <- data.frame(diff(covid19_RI$confirmed))
   
 colnames(covid19_RI_diff)[1] = "confirmed"
 covid19_RI_diff$date = covid19_RI$date[2:length(covid19_RI$date)]
