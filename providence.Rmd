@@ -12,27 +12,27 @@ library(tsbox) # transform data into time series
 library(xts)
 library(COVID19) # to get data about covid 19
 library(aTSA) # adf.test
-library(forecast) #arima model
+library(forecast) #ariRI model
 library(vars) #VAR and Causality
 ```
 # COVID 19
-## Load COVID 19 data for Massachusetts
-```{r covid 19 for MA}
-# extract MA data from US data. level 3 is by cities but cannot find Boston.
-covid19_MA <- covid19("USA", level = 2) %>%
-  filter(state == "Massachusetts") %>%
+## Load COVID 19 data for RIssachusetts
+```{r covid 19 for RI}
+# extract RI data from US data. level 3 is by cities but cannot find Boston.
+covid19_RI <- covid19("USA", level = 2) %>%
+  filter(state == "Rhode Island") %>%
   # filter out days when confirmed is zero or one
   # becasue when it was 1 for a very long time
   filter(confirmed > 1)
 
 # brief display
-head(covid19_MA)
+head(covid19_RI)
 ```
 ### Choice explained
 
 #### Scope of data
 
-The covid 19 data related to the whole state of Massachusetts are chosen, because the auther believes that suburban area and capital city are closely related in the context of disease and crime. It is well known that in America most of the residential area, suburban or rual area, is separately identifiable from commercial zone, the cities. While the crime might have happened in the city of Boston, the suspects or victims might live outside of Boston.
+The covid 19 data related to the whole state of RIssachusetts are chosen, because the auther believes that suburban area and capital city are closely related in the context of disease and crime. It is well known that in America most of the residential area, suburban or rual area, is separately identifiable from commercial zone, the cities. While the crime might have happened in the city of Boston, the suspects or victims might live outside of Boston.
 
 #### Confirmed cases instead of Death count
 
@@ -43,20 +43,20 @@ Although the number of confirmed cases can largely be influenced by the testing 
 ```{r overview of covid, message=FALSE}
 # plot cumulative cases
 # extract for tranforming into time series data
-ts_MA <- covid19_MA %>% 
+ts_RI <- covid19_RI %>% 
   dplyr::select(date, confirmed) %>%
   ts_xts()
 
-plot.xts(ts_MA,
-         main = "Cumulative confirmed cases 
-         of COVID19 in Boston")
+plot.xts(ts_RI,
+         RIin = "Cumulative confirmed cases 
+         of COVID19 in Rhode Island")
 
 # plot daily cases
 # first difference
-ts_diff_MA <- diff(ts_MA)
-plot.xts(ts_diff_MA,
-         main = "Daily confirmed cases of
-         COVID19 in Boston")
+ts_diff_RI <- diff(ts_RI)
+plot.xts(ts_diff_RI,
+         RIin = "Daily confirmed cases of
+         COVID19 in Rhode Island")
 ```
 
 As shown above, cumulative cases and daily cases have been plotted above.
@@ -67,21 +67,22 @@ As shown above, cumulative cases and daily cases have been plotted above.
 # construct GAMM model from prof. Brown's work
 
 # construct data frame of difference, not time series
-covid19_MA_diff <- data.frame(diff(covid19_MA$confirmed))
-colnames(covid19_MA_diff)[1] = "confirmed"
-covid19_MA_diff$date = covid19_MA$date[2:length(covid19_MA$date)]
+covid19_RI_diff <- data.frame(diff(covid19_RI$confirmed)) %>%
+  
+colnames(covid19_RI_diff)[1] = "confirmed"
+covid19_RI_diff$date = covid19_RI$date[2:length(covid19_RI$date)]
 
 # time as integer
-covid19_MA_diff$timeInt = as.numeric(covid19_MA_diff$date)
-# make a copy to avoid perfect collinearity for mixed effect
-covid19_MA_diff$timeIid = covid19_MA_diff$timeInt
+covid19_RI_diff$timeInt = as.numeric(covid19_RI_diff$date)
+# RIke a copy to avoid perfect collinearity for mixed effect
+covid19_RI_diff$timeIid = covid19_RI_diff$timeInt
 
 # GAMM model
-gamMA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 70), 
+gamRI <- gamm4::gamm4(confirmed ~ s(timeInt, k = 70), 
                       random = ~(1|timeIid),
-                      data = covid19_MA_diff,
+                      data = covid19_RI_diff,
                       family = poisson(link = 'log'))
-# currently 70 is the max due to length of data
+# currently 70 is the RIx due to length of data
 ```
 
 In order to study covid19's impact on Boston, its trend needs to be modeled first to have a better understanding of the situation. A Generalized Additive Mixed Model is used here, which is a direct copy from prof. Patrick Brown's work in STA303 Assignment 3.
@@ -89,21 +90,21 @@ In order to study covid19's impact on Boston, its trend needs to be modeled firs
 #### Visuzalization of the model
 ```{r plot GAMM}
 # plot fitted value
-toPredict = data.frame(time = seq(covid19_MA_diff$date[1], 
-                                          covid19_MA_diff$date[length(covid19_MA_diff$date)],
+toPredict = data.frame(time = seq(covid19_RI_diff$date[1], 
+                                          covid19_RI_diff$date[length(covid19_RI_diff$date)],
                                   by = '1 day'))
 toPredict$timeInt = as.numeric(toPredict$time)
 
 # plot
 
-matplot(toPredict$time, 
-        exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE)) %*% 
-              Pmisc::ciMat()), 
+RItplot(toPredict$time, 
+        exp(do.call(cbind, mgcv::predict.gam(gamRI$gam, toPredict, se.fit=TRUE)) %*% 
+              Pmisc::ciRIt()), 
         col='red', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='Daliy Confirmed cases', 
-        ylim = c(0.5, 3500), xlim = as.Date(c(covid19_MA$date[1], covid19_MA$date[length(covid19_MA$date)])))
+        ylim = c(0.5, 3500), xlim = as.Date(c(covid19_RI$date[1], covid19_RI$date[length(covid19_RI$date)])))
 title("Daily confirmed cases of COVID 19 in Boston")
 
-matpoints(toPredict$time, covid19_MA_diff$confirmed, 
+RItpoints(toPredict$time, covid19_RI_diff$confirmed, 
           col = 'black',
           type = 'l')
 ```
@@ -112,32 +113,32 @@ The overall trend of the covid 19 infection in Boston is successfully modeled an
 #### Obtain the residuals
 ```{r covid 19 residual}
 # obtain forecast
-forecast_covid <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamMA$gam, toPredict, se.fit=TRUE))))
+forecast_covid <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamRI$gam, toPredict, se.fit=TRUE))))
                         
                         
 # access residuals
-MA_res <- data.frame(covid19_MA_diff$confirmed - forecast_covid$fit)
+RI_res <- data.frame(covid19_RI_diff$confirmed - forecast_covid$fit)
 
 # transform into time series
-MA_res$time = covid19_MA_diff$date
-colnames(MA_res)[1] = "residuals"
+RI_res$time = covid19_RI_diff$date
+colnames(RI_res)[1] = "residuals"
 
 col_order <- c("time", "residuals")
-MA_res <- MA_res[, col_order]
+RI_res <- RI_res[, col_order]
 
-MA_res_ts <- ts_xts(MA_res)
+RI_res_ts <- ts_xts(RI_res)
 
-plot.xts(MA_res_ts,
-         main = "Daily fluctuation of COVID 19 confirmd cases
-         in MA outside its overall trend")
+plot.xts(RI_res_ts,
+         RIin = "Daily fluctuation of COVID 19 confirmd cases
+         in RI outside its overall trend")
 # adf test
-adf.test(as.ts(MA_res_ts))
+adf.test(as.ts(RI_res_ts))
 
 # lag residuals by 4 days due to testing time
-MA_res_lag <- stats::lag(MA_res_ts, k = -4)
+RI_res_lag <- stats::lag(RI_res_ts, k = -4)
 ```
 
-The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in Massachusetts, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
+The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in RIssachusetts, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
 # Providence Crime
 ## Load crime data
 ```{r get Providence data}
@@ -159,41 +160,41 @@ providence <- providence %>%
 ```
 
 ## Overview of crime
-```{r summary}
-# summary of all crime
-providence_summary <- providence %>%
+```{r sumRIry}
+# sumRIry of all crime
+providence_sumRIry <- providence %>%
   group_by(crime) %>%
-  summarise(number_of_crime = n()) %>%
+  sumRIrise(number_of_crime = n()) %>%
   arrange(desc(number_of_crime))
 
-providence_summary
+providence_sumRIry
 
 providence %>%
-  filter(crime %in% head(providence_summary$crime, 5)) %>%
+  filter(crime %in% head(providence_sumRIry$crime, 5)) %>%
   ggplot(aes(x=crime)) +
   geom_bar()
 
 # top 5 crime over time
 # monthly
-# not too many months anyways
+# not too RIny months anyways
 providence %>%
   dplyr::select(y_month, crime) %>%
-  filter(crime %in% head(providence_summary$crime, 5)) %>% 
+  filter(crime %in% head(providence_sumRIry$crime, 5)) %>% 
   count(y_month, crime) %>%
   ggplot(aes(y_month, n, group = crime, color = crime)) +
   geom_line() + 
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_sumRIry$OFFENSE_DESCRIPTION[1:5]))) +
   ggtitle("Frequency of top 5 crime in Providence")
 
 # daily
 providence %>%
   dplyr::select(date, crime) %>%
-  filter(crime %in% head(providence_summary$crime, 5)) %>% 
+  filter(crime %in% head(providence_sumRIry$crime, 5)) %>% 
   count(date, crime) %>%
   ggplot(aes(date, n, group = crime, color = crime)) +
   geom_line() + 
   facet_wrap(~crime) +
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_sumRIry$OFFENSE_DESCRIPTION[1:5]))) +
   ggtitle("Frequency of top 5 crime in Providence")
 ```
 
@@ -203,7 +204,7 @@ providence %>%
 ```{r extract cases}
 # extract top 5 cases
 top5crime <- providence %>%
-  filter(crime %in% head(providence_summary$crime,5)) %>%
+  filter(crime %in% head(providence_sumRIry$crime,5)) %>%
   group_by(date, crime) %>%
   tally() %>%
   spread(crime, n)
@@ -221,7 +222,7 @@ colnames(top5crime) <- c("time",
 
 # create date
 top5crime$time <- as.Date(top5crime$time,
-                          format = "%Y-%m-%d")
+                          forRIt = "%Y-%m-%d")
 
 # create time series
 top5crime_xts <- ts_xts(top5crime[,1:2])
@@ -239,14 +240,14 @@ top5crime_diff <- na.omit(diff(top5crime_xts))
 ```{r top 5 crime VAR}
 # specify common time range
 # start from when covid was a thing
-# end with crime since it is manually updated
-common_time <- seq.Date(start(MA_res_ts), end(top5crime_diff), by = "day")
+# end with 1 day before today's date
+common_time <- seq.Date(start(RI_res_ts), Sys.Date() - 1 , by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")],
-                       MA_res_ts[paste(common_time[1],
+                       RI_res_ts[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")])
 
@@ -267,14 +268,89 @@ for (i in 1:(ncol(combined_diff) - 1)){
 }
 ```
 
-Many look very promising
+RIny look very promising
 
 ### Step 5: Construct VAR model
-```{r construct var}
+```{r construct var, warning = FALSE}
 # variable selection based on AIC
-VARselect(combined_diff[,c(1,6)], type = 'none', lag.max = 10)
-VARselect(combined_diff[,c(2,6)], type = 'none', lag.max = 10)
-VARselect(combined_diff[,c(3,6)], type = 'none', lag.max = 10)
-VARselect(combined_diff[,c(4,6)], type = 'none', lag.max = 10)
-VARselect(combined_diff[,c(5,6)], type = 'none', lag.max = 10)
+optiaml_assault <- VARselect(combined_diff[,c(1,6)], type = 'none', lag.RIx = 10)
+optiRIl_larceny <- VARselect(combined_diff[,c(2,6)], type = 'none', lag.RIx = 10)
+optiRIl_vehicle <- VARselect(combined_diff[,c(3,6)], type = 'none', lag.RIx = 10)
+optiRIl_missing <- VARselect(combined_diff[,c(4,6)], type = 'none', lag.RIx = 10)
+optiRIl_vandalism <- VARselect(combined_diff[,c(5,6)], type = 'none', lag.RIx = 10)
+
+# use AIC as selection criteria
+VAR_assault <- VAR(y=as.ts(combined_diff[,c(1,6)]), p=optiaml_assault$selection[1])
+VAR_larceny <- VAR(y=as.ts(combined_diff[,c(2,6)]), p=optiRIl_larceny$selection[1])
+VAR_vehicle <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=optiRIl_vehicle$selection[1])
+VAR_missing <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=optiRIl_missing$selection[1])
+VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=optiRIl_vandalism$selection[1])
+```
+
+### Step 6: Granger Causality test
+#### ASSAULT
+```{r granger assault, warning=FALSE}
+causality(VAR_assault, cause = colnames(combined_diff)[1])
+causality(VAR_assault, cause = "residuals")
+```
+Nothing significant
+
+#### LARCENY
+```{r granger larceny, warning=FALSE}
+causality(VAR_larceny, cause = colnames(combined_diff)[2])
+causality(VAR_larceny, cause = "residuals")
+```
+Almost weak. Nothing significant.
+
+#### LARCENY FROM VEHICLE
+```{r granger vehicle, warning=FALSE}
+causality(VAR_vehicle, cause = colnames(combined_diff)[3])
+causality(VAR_vehicle, cause = "residuals")
+```
+
+Larceny from vehicle significant to covid.
+covid significant to larceny from vehicle.
+
+#### MISSING
+```{r granger missing, warning=FALSE}
+causality(VAR_missing, cause = colnames(combined_diff)[4])
+causality(VAR_missing, cause = "residuals")
+```
+Weak instantneous causality
+
+#### VANDALISM
+```{r granger vandalism, warning=FALSE}
+causality(VAR_vandalism, cause = colnames(combined_diff)[5])
+causality(VAR_vandalism, cause = "residuals")
+```
+Not significant.
+
+### Step 7: Impulse Response Function
+
+Only larceny from vechile significant
+```{r irf}
+par(mfrow = c(1,2))
+# larceny from vehicle
+irf_vehicle1 <- irf(VAR_vehicle,
+                    impulse = "larceny_from_vehicle",
+                    response = "residuals",
+                    n.ahead = 24)
+irf_vehicle2 <- irf(VAR_vehicle,
+                    impulse = "residuals",
+                    response = "larceny_from_vehicle",
+                    n.ahead = 24)
+
+plot(irf_vehicle1)
+plot(irf_vehicle2)
+```
+
+### Step 8: Forecast
+```{r var forecast}
+forecast(VAR_vehicle) %>%
+  autoplot()
+
+
+accu_compare <- data.frame(rbind(accuracy(VAR_vehicle$varresult[[1]])))
+rownames(accu_compare) <- c('larceny from vehicle')
+kableExtra::kable(accu_compare, forRIt = 'RIrkdown')
 ```
