@@ -165,7 +165,7 @@ providence <- providence %>%
 ## Overview of crime
 ```{r sumRIry}
 # sumRIry of all crime
-providence_sumRIry <- providence %>%
+providence_summary <- providence %>%
   group_by(crime) %>%
   summarise(number_of_crime = n()) %>%
   arrange(desc(number_of_crime))
