@@ -54,6 +54,12 @@ plot.xts(ts_RI,
 # plot daily cases
 # first difference
 ts_diff_RI <- diff(ts_RI)
+
+# since the end goal is to get residuals
+# can add 2 to all values so that there is no negative value
+# while having residuals unchanged
+adj_diff_RI <- na.omit(ts_diff_RI[,1] + 2)
+
 plot.xts(ts_diff_RI,
          RIin = "Daily confirmed cases of
          COVID19 in Rhode Island")
@@ -67,7 +73,7 @@ As shown above, cumulative cases and daily cases have been plotted above.
 # construct GAMM model from prof. Brown's work
 
 # construct data frame of difference, not time series
-covid19_RI_diff <- data.frame(diff(covid19_RI$confirmed))
+covid19_RI_diff <- data.frame(diff(covid19_RI$confirmed) + 2)
   
 colnames(covid19_RI_diff)[1] = "confirmed"
 covid19_RI_diff$date = covid19_RI$date[2:length(covid19_RI$date)]
@@ -97,14 +103,14 @@ toPredict$timeInt = as.numeric(toPredict$time)
 
 # plot
 
-RItplot(toPredict$time, 
+matplot(toPredict$time, 
         exp(do.call(cbind, mgcv::predict.gam(gamRI$gam, toPredict, se.fit=TRUE)) %*% 
-              Pmisc::ciRIt()), 
+              Pmisc::ciMat()), 
         col='red', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='Daliy Confirmed cases', 
-        ylim = c(0.5, 3500), xlim = as.Date(c(covid19_RI$date[1], covid19_RI$date[length(covid19_RI$date)])))
+        ylim = c(0.5, 800), xlim = as.Date(c(covid19_RI$date[1], covid19_RI$date[length(covid19_RI$date)])))
 title("Daily confirmed cases of COVID 19 in Boston")
 
-RItpoints(toPredict$time, covid19_RI_diff$confirmed, 
+matpoints(toPredict$time, covid19_RI_diff$confirmed, 
           col = 'black',
           type = 'l')
 ```
@@ -133,9 +139,6 @@ plot.xts(RI_res_ts,
          in RI outside its overall trend")
 # adf test
 adf.test(as.ts(RI_res_ts))
-
-# lag residuals by 4 days due to testing time
-RI_res_lag <- stats::lag(RI_res_ts, k = -4)
 ```
 
 The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in RIssachusetts, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
@@ -162,9 +165,9 @@ providence <- providence %>%
 ## Overview of crime
 ```{r sumRIry}
 # sumRIry of all crime
-providence_sumRIry <- providence %>%
+providence_summary <- providence %>%
   group_by(crime) %>%
-  sumRIrise(number_of_crime = n()) %>%
+  summarise(number_of_crime = n()) %>%
   arrange(desc(number_of_crime))
 
 providence_sumRIry
@@ -194,7 +197,7 @@ providence %>%
   ggplot(aes(date, n, group = crime, color = crime)) +
   geom_line() + 
   facet_wrap(~crime) +
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_sumRIry$OFFENSE_DESCRIPTION[1:5]))) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$OFFENSE_DESCRIPTION[1:5]))) +
   ggtitle("Frequency of top 5 crime in Providence")
 ```
 
@@ -273,18 +276,18 @@ RIny look very promising
 ### Step 5: Construct VAR model
 ```{r construct var, warning = FALSE}
 # variable selection based on AIC
-optiaml_assault <- VARselect(combined_diff[,c(1,6)], type = 'none', lag.RIx = 10)
-optiRIl_larceny <- VARselect(combined_diff[,c(2,6)], type = 'none', lag.RIx = 10)
-optiRIl_vehicle <- VARselect(combined_diff[,c(3,6)], type = 'none', lag.RIx = 10)
-optiRIl_missing <- VARselect(combined_diff[,c(4,6)], type = 'none', lag.RIx = 10)
-optiRIl_vandalism <- VARselect(combined_diff[,c(5,6)], type = 'none', lag.RIx = 10)
+optimal_assault <- VARselect(combined_diff[,c(1,6)], type = 'none', lag.max = 10)
+optimal_larceny <- VARselect(combined_diff[,c(2,6)], type = 'none', lag.max = 10)
+optimal_vehicle <- VARselect(combined_diff[,c(3,6)], type = 'none', lag.max = 10)
+optimal_missing <- VARselect(combined_diff[,c(4,6)], type = 'none', lag.max = 10)
+optimal_vandalism <- VARselect(combined_diff[,c(5,6)], type = 'none', lag.max = 10)
 
 # use AIC as selection criteria
-VAR_assault <- VAR(y=as.ts(combined_diff[,c(1,6)]), p=optiaml_assault$selection[1])
-VAR_larceny <- VAR(y=as.ts(combined_diff[,c(2,6)]), p=optiRIl_larceny$selection[1])
-VAR_vehicle <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=optiRIl_vehicle$selection[1])
-VAR_missing <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=optiRIl_missing$selection[1])
-VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=optiRIl_vandalism$selection[1])
+VAR_assault <- VAR(y=as.ts(combined_diff[,c(1,6)]), p=optimal_assault$selection[1])
+VAR_larceny <- VAR(y=as.ts(combined_diff[,c(2,6)]), p=optimal_larceny$selection[1])
+VAR_vehicle <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=optimal_vehicle$selection[1])
+VAR_missing <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=optimal_missing$selection[1])
+VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=optimal_vandalism$selection[1])
 ```
 
 ### Step 6: Granger Causality test
@@ -300,7 +303,7 @@ Nothing significant
 causality(VAR_larceny, cause = colnames(combined_diff)[2])
 causality(VAR_larceny, cause = "residuals")
 ```
-Almost weak. Nothing significant.
+Nothing significant
 
 #### LARCENY FROM VEHICLE
 ```{r granger vehicle, warning=FALSE}
@@ -309,14 +312,14 @@ causality(VAR_vehicle, cause = "residuals")
 ```
 
 Larceny from vehicle significant to covid.
-covid significant to larceny from vehicle.
+covid significant to larceny from vehicle, weak.
 
 #### MISSING
 ```{r granger missing, warning=FALSE}
 causality(VAR_missing, cause = colnames(combined_diff)[4])
 causality(VAR_missing, cause = "residuals")
 ```
-Weak instantneous causality
+Nothing significant
 
 #### VANDALISM
 ```{r granger vandalism, warning=FALSE}
