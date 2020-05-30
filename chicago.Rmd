@@ -41,6 +41,9 @@ chicago <- chicago %>%
   mutate(MONTH = substr(Date, start = 7, stop = 7))
 ```
 
+GET THE PAST 5 YEARS
+
+
 ```{r}
 # summary of all crime
 chicago_summary <- chicago %>%
@@ -69,6 +72,19 @@ chicago %>%
   ggtitle("Monthly frequency of top 5 crime in chicago in 2020")
 
 # This dataset doesn't have 'day of the week' yet.
+
+# daily
+chicago %>%
+  dplyr::select(date, Primary.Type) %>%
+  filter(Primary.Type %in% chicago_summary$Primary.Type[1:5]) %>%
+  count(date, Primary.Type) %>%
+  ggplot(aes(date, n, group = Primary.Type, color = Primary.Type)) +
+  geom_line() +
+  facet_wrap(~Primary.Type) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(chicago_summary$Primary.Type[1:5]))) +
+  ggtitle("Frequency of top 5 crime in Chicago in 2020")
+
+# looks life theft is seeing sharp drop
 ```
 
 ## VAR 

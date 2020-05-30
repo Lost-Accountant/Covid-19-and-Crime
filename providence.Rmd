@@ -197,7 +197,7 @@ providence %>%
   ggplot(aes(date, n, group = crime, color = crime)) +
   geom_line() + 
   facet_wrap(~crime) +
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_sumRIry$OFFENSE_DESCRIPTION[1:5]))) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$OFFENSE_DESCRIPTION[1:5]))) +
   ggtitle("Frequency of top 5 crime in Providence")
 ```
 
