@@ -42,9 +42,10 @@ LA %>%
   ggplot(aes(MONTH, n, group = crm_cd_desc, color = crm_cd_desc)) +
   geom_line() +
   scale_color_brewer(palette = "Set1") +
-  ggtitle("Monthly frequency of top 5 crime in LA in 2020")
+  ggtitle("Monthly frequency of top 5 crime in LA in 2020") +
+  theme(plot.title = element_text(hjust = 0.5))
 
-# This dataset doesn't have 'day of the week' yet.
+# This data set doesn't have 'day of the week' yet.
 ```
 
 ## VAR 
@@ -103,11 +104,10 @@ ts_CA <- covid19_CA %>%
   dplyr::select(date, confirmed) %>%
   ts_xts()
 
-# plot time series of IL infection
+# plot time series of California infection
 ts_plot(ts_CA)
 # conduct ADF Test
 adf.test(as.ts(ts_CA))
-# not stationary!
 
 # try first log difference
 ts_diff_CA <- diff(ts_CA)
@@ -141,16 +141,8 @@ toPredict = data.frame(time = seq(covid19_CA_diff$date[1],
                                   by = '1 day'))
 toPredict$timeInt = as.numeric(toPredict$time)
 
-# plot
-
-matplot(toPredict$time, 
-        exp(do.call(cbind, mgcv::predict.gam(gamCA$gam, toPredict, se.fit=TRUE)) %*% 
-              Pmisc::ciMat()), 
-        col='black', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='count', 
-        ylim = c(0.5, 5000), xlim = as.Date(c(covid19_CA$date[1], covid19_CA$date[length(covid19_CA$date)])))
-
 # obtain forecast
-forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamIL$gam, toPredict, se.fit=TRUE))))
+forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamCA$gam, toPredict, se.fit=TRUE))))
 
 # access residuals
 CA_res <- data.frame(covid19_CA_diff$confirmed - forecast$fit)
@@ -167,7 +159,6 @@ CA_res_ts <- ts_xts(CA_res)
 plot.xts(CA_res_ts)
 # adf test
 adf.test(as.ts(CA_res_ts))
-# Stationary process
 ```
 
 ```{r top 5 crime VAR}
@@ -203,17 +194,20 @@ for (i in 1:(ncol(combined_diff) - 1)){
 
 ### Step 5: Construct VAR model
 ```{r construct var}
-VARselect(na.omit(combined_diff)[,c(1,6)], type = 'none', lag.max = 10)
-VARselect(na.omit(combined_diff)[,c(2,6)], type = 'none', lag.max = 10)
-VARselect(na.omit(combined_diff)[,c(3,6)], type = 'none', lag.max = 10)
-VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
-VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
+optimal_battery <- VARselect(na.omit(combined_diff)[,c(1,6)], type = 'none', lag.max = 10)
+optimal_burglary <- VARselect(na.omit(combined_diff)[,c(2,6)], type = 'none', lag.max = 10)
+optimal_burglary_vehicle <- VARselect(na.omit(combined_diff)[,c(3,6)], type = 'none', lag.max = 10)
+optimal_vandalism <- VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
+optimal_vehicle <- VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
 
-VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=2)
-VAR_burglary <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=6)
-VAR_burglary_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]), p=1)
-VAR_vandalism <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]), p=1)
-VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=1)
+VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=optimal_battery$selection[1])
+VAR_burglary <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]),
+                    p=optimal_burglary$selection[1])
+VAR_burglary_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]),
+                            p=optimal_burglary_vehicle$selection[1])
+VAR_vandalism <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
+                     p=optimal_vandalism$selection[1])
+VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_vehicle$selection[1])
 ```
 
 ### Step 6: Granger Causality test
@@ -222,50 +216,62 @@ VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=1)
 causality(VAR_battery, cause = colnames(combined_diff)[1])
 causality(VAR_battery, cause = "residuals")
 ```
-COVID-19 may help to predict battery - simple assault.
 
 ```{r}
 causality(VAR_burglary, cause = colnames(combined_diff)[2])
 causality(VAR_burglary, cause = "residuals")
 ```
-instantaneous causality between: residuals and burglary
 
 ```{r}
 causality(VAR_burglary_vehicle, cause = colnames(combined_diff)[3])
 causality(VAR_burglary_vehicle, cause = "residuals")
 ```
-burglary.from.vehicle Granger-cause residuals, weirdly.
+COVID-19 may help to predict burglary from vehicle (p-value = 0.04295).
 
 ```{r}
 causality(VAR_vandalism, cause = colnames(combined_diff)[4])
 causality(VAR_vandalism, cause = "residuals")
 ```
+COVID-19 may help to predict vandalism (p-value = 0.02398)
+
 ```{r}
 causality(VAR_vehicle, cause = colnames(combined_diff)[5])
 causality(VAR_vehicle, cause = "residuals")
 ```
 ### Step 7: Impulse Response Function
 
-Only 'battery - simple assault' have granger causality.
+burglary from vehicle and vandalism have granger causality.
 
 ```{r irf}
 par(mfrow = c(1,2))
-irf_battery_1 <- irf(VAR_battery, 
-                         impulse = "battery", 
+irf_burg_v_1 <- irf(VAR_burglary_vehicle, 
+                         impulse = "burglary.from.vehicle", 
                          response = "residuals", 
                          n.ahead = 24)
-irf_battery_2 <- irf(VAR_battery, 
+irf_burg_v_2 <- irf(VAR_burglary_vehicle, 
                          impulse = "residuals", 
-                         response = "battery", 
+                         response = "burglary.from.vehicle", 
                          n.ahead = 24)
-plot(irf_battery_1)
-plot(irf_battery_2)
+plot(irf_burg_v_1)
+plot(irf_burg_v_2)
+
+irf_vandalism_1 <- irf(VAR_vandalism, 
+                         impulse = "vandalism", 
+                         response = "residuals", 
+                         n.ahead = 24)
+irf_vandalism_2 <- irf(VAR_vandalism, 
+                         impulse = "residuals", 
+                         response = "vandalism", 
+                         n.ahead = 24)
+plot(irf_vandalism_1)
+plot(irf_vandalism_2)
 ```
-### CONCLUSION
+### CONCLUSION (Last update: MAY 30)
 Significant contribution on prediction:
-  'battery - simple assault'
+ burglary from vehicle (p-value = 0.04295), vandalism (p-value = 0.02398)
 
 Significant simultaneous movement:
-  burglary
+	Not found
+
   
 ==================================
