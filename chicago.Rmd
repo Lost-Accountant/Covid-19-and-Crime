@@ -8,6 +8,7 @@ output: html_document
 ```{r library, message = FALSE, warning = FALSE}
 library(RSocrata)
 library(tidyverse)
+library(tsbox)
 ```
 
 # Chicago Crime
@@ -162,14 +163,6 @@ toPredict = data.frame(time = seq(covid19_IL_diff$date[1],
                                   by = '1 day'))
 toPredict$timeInt = as.numeric(toPredict$time)
 
-# plot
-
-matplot(toPredict$time, 
-        exp(do.call(cbind, mgcv::predict.gam(gamIL$gam, toPredict, se.fit=TRUE)) %*% 
-              Pmisc::ciMat()), 
-        col='black', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='count', 
-        ylim = c(0.5, 5000), xlim = as.Date(c(covid19_IL$date[1], covid19_IL$date[length(covid19_IL$date)])))
-
 # obtain forecast
 forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamIL$gam, toPredict, se.fit=TRUE))))
 
@@ -224,17 +217,19 @@ for (i in 1:(ncol(combined_diff) - 1)){
 
 ### Step 5: Construct VAR model
 ```{r construct var}
-VARselect(na.omit(combined_diff)[,c(1,6)], type = 'none', lag.max = 10)
-VARselect(na.omit(combined_diff)[,c(2,6)], type = 'none', lag.max = 10)
-VARselect(na.omit(combined_diff)[,c(3,6)], type = 'none', lag.max = 10)
-VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
-VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
+optimal_assault <- VARselect(na.omit(combined_diff)[,c(1,6)], type = 'none', lag.max = 10)
+optimal_battery <- VARselect(na.omit(combined_diff)[,c(2,6)], type = 'none', lag.max = 10)
+optimal_criminal <- VARselect(na.omit(combined_diff)[,c(3,6)], type = 'none', lag.max = 10)
+optimal_deceptive <- VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
+optimal_theft <- VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
 
-VAR_assault <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=5)
-VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=1)
-VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]), p=4)
-VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]), p=6)
-VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=5)
+VAR_assault <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=optimal_assault$selection[1])
+VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=optimal_battery$selection[1])
+VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]),
+                    p=optimal_criminal$selection[1])
+VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
+                     p=optimal_deceptive$selection[1])
+VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_theft$selection[1])
 ```
 
 ### Step 6: Granger Causality test
@@ -243,7 +238,7 @@ VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=5)
 causality(VAR_assault, cause = colnames(combined_diff)[1])
 causality(VAR_assault, cause = "residuals")
 ```
-COVID-19 may help to predict assault.
+COVID-19 may help to predict assault (p-value = 0.05525)
 
 ```{r}
 causality(VAR_battery, cause = colnames(combined_diff)[2])
@@ -253,6 +248,8 @@ causality(VAR_battery, cause = "residuals")
 causality(VAR_criminal, cause = colnames(combined_diff)[3])
 causality(VAR_criminal, cause = "residuals")
 ```
+Very significant causality on criminal damage (p-value = 0.0009405)
+instantaneous causality between: residuals and criminal (p-value = 0.01247)
 
 ```{r}
 causality(VAR_deceptive, cause = colnames(combined_diff)[4])
@@ -263,9 +260,7 @@ causality(VAR_deceptive, cause = "residuals")
 causality(VAR_theft, cause = colnames(combined_diff)[5])
 causality(VAR_theft, cause = "residuals")
 ```
-
-COVID-19 may help to predict theft.
-Instantaneous causality appears when we include the current information of variables.
+COVID-19 may help to predict theft. (p-value = 0.03141)
 
 ```{r}
 vehicle <- chicago %>%
@@ -286,8 +281,8 @@ combined_diff2 <- merge(vehicle_diff[paste(common_time[1],
                        IL_res_ts[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")])
-VARselect(na.omit(combined_diff2)[,c(1,2)], type = 'none', lag.max = 10)
-VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff2)[,c(1,2)]), p=4)
+optimal_vehicle <- VARselect(na.omit(combined_diff2)[,c(1,2)], type = 'none', lag.max = 10)
+VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff2)[,c(1,2)]), p=optimal_vehicle$selection[1])
 
 causality(VAR_vehicle, cause = colnames(combined_diff2)[1])
 causality(VAR_vehicle, cause = "residuals")
@@ -295,20 +290,20 @@ causality(VAR_vehicle, cause = "residuals")
 
 ### Step 7: Impulse Response Function
 
-Only assault and theft have granger causality.
+Assault, criminal damage and theft have granger causality.
 
 ```{r irf}
 par(mfrow = c(1,2))
-irf_assault_1 <- irf(VAR_assault, 
-                         impulse = "assault", 
+irf_criminal_1 <- irf(VAR_criminal, 
+                         impulse = "criminal", 
                          response = "residuals", 
                          n.ahead = 24)
-irf_assault_2 <- irf(VAR_assault, 
+irf_criminal_2 <- irf(VAR_criminal, 
                          impulse = "residuals", 
-                         response = "assault", 
+                         response = "criminal", 
                          n.ahead = 24)
-plot(irf_assault_1)
-plot(irf_assault_2)
+plot(irf_criminal_1)
+plot(irf_criminal_2)
 
 # theft
 irf_theft_1 <- irf(VAR_theft, 
@@ -322,11 +317,11 @@ irf_theft_2 <- irf(VAR_theft,
 plot(irf_theft_1)
 plot(irf_theft_2)
 ```
-### CONCLUSION
+### CONCLUSION (Last updated: MAY 30)
 Significant contribution on prediction:
-  assault, theft
+Assault (p-value = 0.05525), criminal damage (p-value = 0.0009405), theft (p-value = 0.03141)
 
 Significant simultaneous movement:
-  theft
+Criminal damage (p-value = 0.01247)
   
 ==================================
