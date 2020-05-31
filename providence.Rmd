@@ -42,13 +42,13 @@ Although the number of confirmed cases can largely be influenced by the testing 
 ### Visualization
 ```{r overview of covid, message=FALSE}
 # plot cumulative cases
-# extract for tranforming into time series data
+# extract for transforming into time series data
 ts_RI <- covid19_RI %>% 
   dplyr::select(date, confirmed) %>%
   ts_xts()
 
 plot.xts(ts_RI,
-         RIin = "Cumulative confirmed cases 
+         main = "Cumulative confirmed cases 
          of COVID19 in Rhode Island")
 
 # plot daily cases
@@ -61,7 +61,7 @@ ts_diff_RI <- diff(ts_RI)
 adj_diff_RI <- na.omit(ts_diff_RI[,1] + 2)
 
 plot.xts(ts_diff_RI,
-         RIin = "Daily confirmed cases of
+         main = "Daily confirmed cases of
          COVID19 in Rhode Island")
 ```
 
