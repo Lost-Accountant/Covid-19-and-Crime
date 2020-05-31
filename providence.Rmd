@@ -88,7 +88,7 @@ gamRI <- gamm4::gamm4(confirmed ~ s(timeInt, k = 70),
                       random = ~(1|timeIid),
                       data = covid19_RI_diff,
                       family = poisson(link = 'log'))
-# currently 70 is the RIx due to length of data
+# currently 70 is the max due to length of data
 ```
 
 In order to study covid19's impact on Boston, its trend needs to be modeled first to have a better understanding of the situation. A Generalized Additive Mixed Model is used here, which is a direct copy from prof. Patrick Brown's work in STA303 Assignment 3.
@@ -135,13 +135,13 @@ RI_res <- RI_res[, col_order]
 RI_res_ts <- ts_xts(RI_res)
 
 plot.xts(RI_res_ts,
-         RIin = "Daily fluctuation of COVID 19 confirmd cases
+         main = "Daily fluctuation of COVID 19 confirmd cases
          in RI outside its overall trend")
 # adf test
 adf.test(as.ts(RI_res_ts))
 ```
 
-The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in RIssachusetts, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
+The residuals obtained here represents the fluctuation of daily confirmed cases of COVID 19 in providence, in order to obtain a stationary time series for future analysis. This residuals can otherwise be interpreted as "fluctuation outside the new norm".
 # Providence Crime
 ## Load crime data
 ```{r get Providence data}
@@ -163,41 +163,41 @@ providence <- providence %>%
 ```
 
 ## Overview of crime
-```{r sumRIry}
-# sumRIry of all crime
+```{r summary}
+# summary of all crime
 providence_summary <- providence %>%
   group_by(crime) %>%
   summarise(number_of_crime = n()) %>%
   arrange(desc(number_of_crime))
 
-providence_sumRIry
+providence_summary
 
 providence %>%
-  filter(crime %in% head(providence_sumRIry$crime, 5)) %>%
+  filter(crime %in% head(providence_summary$crime, 5)) %>%
   ggplot(aes(x=crime)) +
   geom_bar()
 
 # top 5 crime over time
 # monthly
-# not too RIny months anyways
+# not too many months anyways
 providence %>%
   dplyr::select(y_month, crime) %>%
-  filter(crime %in% head(providence_sumRIry$crime, 5)) %>% 
+  filter(crime %in% head(providence_summary$crime, 5)) %>% 
   count(y_month, crime) %>%
   ggplot(aes(y_month, n, group = crime, color = crime)) +
   geom_line() + 
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_sumRIry$OFFENSE_DESCRIPTION[1:5]))) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$crime[1:5]))) +
   ggtitle("Frequency of top 5 crime in Providence")
 
 # daily
 providence %>%
   dplyr::select(date, crime) %>%
-  filter(crime %in% head(providence_sumRIry$crime, 5)) %>% 
+  filter(crime %in% head(providence_summary$crime, 5)) %>% 
   count(date, crime) %>%
   ggplot(aes(date, n, group = crime, color = crime)) +
   geom_line() + 
   facet_wrap(~crime) +
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$crime[1:5]))) +
   ggtitle("Frequency of top 5 crime in Providence")
 ```
 
@@ -207,7 +207,7 @@ providence %>%
 ```{r extract cases}
 # extract top 5 cases
 top5crime <- providence %>%
-  filter(crime %in% head(providence_sumRIry$crime,5)) %>%
+  filter(crime %in% head(providence_summary$crime,5)) %>%
   group_by(date, crime) %>%
   tally() %>%
   spread(crime, n)
@@ -225,7 +225,7 @@ colnames(top5crime) <- c("time",
 
 # create date
 top5crime$time <- as.Date(top5crime$time,
-                          forRIt = "%Y-%m-%d")
+                          format = "%Y-%m-%d")
 
 # create time series
 top5crime_xts <- ts_xts(top5crime[,1:2])
@@ -271,7 +271,7 @@ for (i in 1:(ncol(combined_diff) - 1)){
 }
 ```
 
-RIny look very promising
+Many look very promising
 
 ### Step 5: Construct VAR model
 ```{r construct var, warning = FALSE}
@@ -355,5 +355,5 @@ forecast(VAR_vehicle) %>%
 
 accu_compare <- data.frame(rbind(accuracy(VAR_vehicle$varresult[[1]])))
 rownames(accu_compare) <- c('larceny from vehicle')
-kableExtra::kable(accu_compare, forRIt = 'RIrkdown')
+kableExtra::kable(accu_compare, format = 'markdown')
 ```
