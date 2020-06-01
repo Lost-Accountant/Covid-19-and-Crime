@@ -54,7 +54,13 @@ ts_diff_CH <- na.omit(diff(ts_CH))
 plot.xts(ts_diff_CH,
          main = "Daily confirmed cases of
          COVID19 in Chicago")
+
+covid19_CH_diff <- data.frame(diff(covid19_CH$confirmed))
+colnames(covid19_CH_diff)[1] = "confirmed"
+covid19_CH_diff$date = covid19_CH$date[2:length(covid19_CH$date)]
 ```
+
+
 
 # Chicago Crime
 ## Load crime data
@@ -176,8 +182,8 @@ adf.test(as.ts(ts_CH))
 # not stationary!
 
 # try first log difference
-ts_diff_IL <- diff(ts_CH)
-ts_plot(ts_diff_IL)
+ts_diff_CH <- diff(ts_CH)
+ts_plot(ts_diff_CH)
 # still clearly not stationary
 # need de-trend
 
@@ -194,10 +200,10 @@ covid19_CH_diff$timeIid = covid19_CH_diff$timeInt
 
 # GAMM model
 # 50 too overfit. 15 looks decent
-gamIL <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
+gamCH <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
 	data=covid19_CH_diff, family=poisson(link='log'))
 
-lme4::VarCorr(gamIL$mer)
+lme4::VarCorr(gamCH$mer)
 # looks like random intercept is making little difference.
 # choose to not have random effect to preserve it for time series analysis
 
@@ -208,23 +214,23 @@ toPredict = data.frame(time = seq(covid19_CH_diff$date[1],
 toPredict$timeInt = as.numeric(toPredict$time)
 
 # obtain forecast
-forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamIL$gam, toPredict, se.fit=TRUE))))
+forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamCH$gam, toPredict, se.fit=TRUE))))
 
 # access residuals
-IL_res <- data.frame(covid19_CH_diff$confirmed - forecast$fit)
+CH_res <- data.frame(covid19_CH_diff$confirmed - forecast$fit)
 
 # transform into time series
-IL_res$time = covid19_CH_diff$date
-colnames(IL_res)[1] = "residuals"
+CH_res$time = covid19_CH_diff$date
+colnames(CH_res)[1] = "residuals"
 
 col_order <- c("time", "residuals")
-IL_res <- IL_res[, col_order]
+CH_res <- CH_res[, col_order]
 
-IL_res_ts <- ts_xts(IL_res)
+CH_res_ts <- ts_xts(CH_res)
 
-plot.xts(IL_res_ts)
+plot.xts(CH_res_ts)
 # adf test
-adf.test(as.ts(IL_res_ts))
+adf.test(as.ts(CH_res_ts))
 # Stationary process
 ```
 
@@ -232,13 +238,13 @@ adf.test(as.ts(IL_res_ts))
 # specify common time range
 # start from when covid was a thing
 # end with crime since it is manually updated
-common_time <- seq.Date(start(IL_res_ts), end(top5crime_diff), by = "day")
+common_time <- seq.Date(start(CH_res_ts), end(top5crime_diff), by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")],
-                       IL_res_ts[paste(common_time[1],
+                       CH_res_ts[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")])
 
@@ -294,8 +300,7 @@ causality(VAR_battery, cause = "residuals")
 causality(VAR_criminal, cause = colnames(combined_diff)[3])
 causality(VAR_criminal, cause = "residuals")
 ```
-Very significant causality on criminal damage (p-value = 0.0009405)
-instantaneous causality between: residuals and criminal (p-value = 0.01247)
+Very significant causality on criminal damage (p-value = 0.01221)
 
 ```{r}
 causality(VAR_deceptive, cause = colnames(combined_diff)[4])
@@ -306,17 +311,17 @@ causality(VAR_deceptive, cause = "residuals")
 causality(VAR_theft, cause = colnames(combined_diff)[5])
 causality(VAR_theft, cause = "residuals")
 ```
-COVID-19 may help to predict theft. (p-value = 0.03141)
+COVID-19 may help to predict theft. (p-value = 0.05294)
 
 ```{r}
 vehicle <- chicago %>%
-  filter(Primary.Type == 'MOTOR VEHICLE THEFT')%>%
-  group_by(date, Primary.Type) %>%
+  filter(primary_type == 'MOTOR VEHICLE THEFT')%>%
+  group_by(date, primary_type) %>%
   tally() %>%
-  spread(Primary.Type, n)
+  spread(primary_type, n)
 
 colnames(vehicle) <- c('time', 'vehicle')
-vehicle_xts <- ts_xts(vehicle[,1:2])
+vehicle_xts <- ts_xts(na.omit(vehicle)[,1:2])
 vehicle_diff <- na.omit(diff(vehicle_xts))
 ```
 
@@ -324,7 +329,7 @@ vehicle_diff <- na.omit(diff(vehicle_xts))
 combined_diff2 <- merge(vehicle_diff[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")],
-                       IL_res_ts[paste(common_time[1],
+                       CH_res_ts[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")])
 optimal_vehicle <- VARselect(na.omit(combined_diff2)[,c(1,2)], type = 'none', lag.max = 10)
@@ -333,6 +338,7 @@ VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff2)[,c(1,2)]), p=optimal_vehicle$
 causality(VAR_vehicle, cause = colnames(combined_diff2)[1])
 causality(VAR_vehicle, cause = "residuals")
 ```
+covid-19 is significant to vehicle theft (p-value = 0.005237)
 
 ### Step 7: Impulse Response Function
 
@@ -401,11 +407,5 @@ ir.theft2 <- irf(VAR_theft,
                          cumulative = T)
 plot(ir.theft2)
 ```
-### CONCLUSION (Last updated: MAY 30)
-Significant contribution on prediction:
-Assault (p-value = 0.05525), criminal damage (p-value = 0.0009405), theft (p-value = 0.03141)
-
-Significant simultaneous movement:
-Criminal damage (p-value = 0.01247)
   
 ==================================
