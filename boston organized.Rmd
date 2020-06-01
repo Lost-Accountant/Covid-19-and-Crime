@@ -224,6 +224,16 @@ boston %>%
   geom_bar(width = 0.5) +
   facet_wrap(~ OFFENSE_DESCRIPTION)
 
+# year to year comparison
+boston %>%
+  dplyr::select(y_month, MONTH, OFFENSE_DESCRIPTION, YEAR) %>%
+  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5]) %>%
+  count(YEAR, MONTH, OFFENSE_DESCRIPTION) %>%
+  na.omit() %>%
+  ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
+  geom_line() +
+  facet_wrap(~OFFENSE_DESCRIPTION) +
+  ggtitle("year to year comparison of the top 5 crime in boston in the past 5 years")
 ```
 
 Many plots in different style about the top 5 most frequent crime in Boston.
