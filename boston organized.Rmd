@@ -46,7 +46,7 @@ Although the number of confirmed cases can largely be influenced by the testing 
 ### Visualization
 ```{r overview of covid, message=FALSE}
 # plot cumulative cases
-# extract for tranforming into time series data
+# extract for transforming into time series data
 ts_MA <- covid19_MA %>% 
   dplyr::select(date, confirmed) %>%
   ts_xts()

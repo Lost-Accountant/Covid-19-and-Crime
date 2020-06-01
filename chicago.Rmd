@@ -6,43 +6,79 @@ output: html_document
 ---
 
 ```{r library, message = FALSE, warning = FALSE}
-library(RSocrata)
 library(tidyverse)
+<<<<<<< HEAD
 library(tsbox)
+library(COVID19)
+library(tseries)
+library(xts)
+library(vars)
+=======
+library(tsbox) # transform data into time series
+library(xts)
+library(COVID19) # to get data about covid 19
+library(aTSA) # adf.test
+library(forecast) #arima model
+library(vars) #VAR and Causality
+>>>>>>> f252e994503515676682b9de100f710755553261
+```
+
+This document is to study the possible relationship between COVID-19 and frequency of crime committed in teh city of Chicago.
+
+# COVID19
+
+## Load COVID 19 data for Chicago
+```{r covid 19 for chicago region}
+covid19_CH <- covid19("USA", level = 3) %>%
+  # this cook county contains chicago
+  filter(city == "Cook",
+         state == "Illinois" ) %>%
+  # filter out days when confirmed is zero or one
+  # becasue when it was 2 for a very long time
+  filter(confirmed > 2)
+
+# brief display
+head(covid19_CH)
+```
+
+## Overview of the data
+### Visualization
+```{r overview of covid, message=FALSE}
+# plot cumulative cases
+# extract for transforming into time series
+ts_CH <- covid19_CH %>%
+  dplyr::select(date, confirmed) %>%
+  ts_xts()
+
+plot.xts(ts_CH,
+         main = "Cumulative confirmed cases
+         of COVID 19 in Chicago")
+
+# plot daily cases
+# first difference
+ts_diff_CH <- na.omit(diff(ts_CH))
+
+plot.xts(ts_diff_CH,
+         main = "Daily confirmed cases of
+         COVID19 in Chicago")
 ```
 
 # Chicago Crime
 ## Load crime data
-### FULL DATA, RUN AT OWN RISK
-```{r get chicago data, 2001 - 2020}
-chicago_full <- read.socrata(
-  "https://data.cityofchicago.org/resource/ijzp-q8t2.csv",
-  app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
-
-head(chicago_full)
-
-# add date
-chicago_full <- chicago_full %>%
-  mutate(date = substr(Date, start = 1, stop = 10)) %>%
-  mutate(y_month  = substr(Date, start = 1, stop = 7))
-
-```
-### 2020 ONLY
-```{r get chicago data, 2020 only}
+### 2014 - 2020
+```{r get chicago data, 2014 - 2020}
 chicago <- read.socrata(
-  "https://data.cityofchicago.org/resource/qzdf-xmn8.csv",
+  "https://data.cityofchicago.org/resource/ijzp-q8t2.csv?$where=year >= 2014",
   app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
 
 head(chicago)
 
 # add date
 chicago <- chicago %>%
-  mutate(date = substr(Date, start = 1, stop = 10)) %>%
-  mutate(y_month  = substr(Date, start = 1, stop = 7)) %>%
-  mutate(MONTH = substr(Date, start = 7, stop = 7))
+  mutate(Date = substr(date, start = 1, stop = 10)) %>%
+  mutate(y_month  = substr(date, start = 1, stop = 7)) %>%
+  mutate(month = substr(date, start = 7, stop = 7))
 ```
-
-GET THE PAST 5 YEARS
 
 
 ```{r}
@@ -246,6 +282,8 @@ VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]),
 VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
                      p=optimal_deceptive$selection[1])
 VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_theft$selection[1])
+
+summary(VAR_assault)
 ```
 
 ### Step 6: Granger Causality test
@@ -313,11 +351,13 @@ par(mfrow = c(1,2))
 irf_criminal_1 <- irf(VAR_criminal, 
                          impulse = "criminal", 
                          response = "residuals", 
-                         n.ahead = 24)
+                         n.ahead = 24,
+                         ortho = F)
 irf_criminal_2 <- irf(VAR_criminal, 
                          impulse = "residuals", 
                          response = "criminal", 
-                         n.ahead = 24)
+                         n.ahead = 24,
+                         ortho = F)
 plot(irf_criminal_1)
 plot(irf_criminal_2)
 
@@ -325,13 +365,49 @@ plot(irf_criminal_2)
 irf_theft_1 <- irf(VAR_theft, 
                          impulse = "theft", 
                          response = "residuals", 
-                         n.ahead = 24)
+                         n.ahead = 24,
+                         ortho = F)
 irf_theft_2 <- irf(VAR_theft, 
                          impulse = "residuals", 
                          response = "theft", 
-                         n.ahead = 24)
+                         n.ahead = 24,
+                         ortho = F)
 plot(irf_theft_1)
 plot(irf_theft_2)
+
+# Calculate impulse response
+ir.criminal1 <- irf(VAR_criminal,impulse = "criminal", 
+                         response = "residuals", 
+                         n.ahead = 24,
+                         ortho = F,
+                         cumulative = TRUE)
+
+# Plot
+plot(ir.criminal1)
+
+ir.criminal2 <- irf(VAR_criminal, 
+                         impulse = "residuals", 
+                         response = "criminal", 
+                         n.ahead = 24,
+                         ortho = F,
+                         cumulative = T)
+plot(ir.criminal2)
+
+ir.theft1 <- irf(VAR_theft, 
+                         impulse = "theft", 
+                         response = "residuals", 
+                         n.ahead = 24,
+                         ortho = F,
+                         cumulative = T)
+plot(ir.theft1)
+
+ir.theft2 <- irf(VAR_theft, 
+                         impulse = "residuals", 
+                         response = "theft", 
+                         n.ahead = 24,
+                         ortho = F,
+                         cumulative = T)
+plot(ir.theft2)
 ```
 ### CONCLUSION (Last updated: MAY 30)
 Significant contribution on prediction:
