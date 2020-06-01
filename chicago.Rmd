@@ -60,7 +60,7 @@ plot.xts(ts_diff_CH,
 ## Load crime data
 ### 2014 - 2020
 ```{r get chicago data, 2014 - 2020}
-chicago <- read.socrata(
+chicago <- RSocrata::read.socrata(
   "https://data.cityofchicago.org/resource/ijzp-q8t2.csv?$where=year >= 2014",
   app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
 
@@ -70,21 +70,21 @@ head(chicago)
 chicago <- chicago %>%
   mutate(Date = substr(date, start = 1, stop = 10)) %>%
   mutate(y_month  = substr(date, start = 1, stop = 7)) %>%
-  mutate(month = substr(date, start = 7, stop = 7))
+  mutate(month = substr(date, start = 6, stop = 7))
 ```
 
 
 ```{r}
 # summary of all crime
 chicago_summary <- chicago %>%
-  group_by(Primary.Type) %>%
+  group_by(primary_type) %>%
   summarise(number_of_crime = n()) %>%
   arrange(desc(number_of_crime))
 
 # bar chart of 5 most frequent crime over the years
 chicago %>%
-  filter(Primary.Type %in% head(chicago_summary$Primary.Type, 5)) %>%
-  ggplot(aes(x=Primary.Type, fill=Primary.Type)) +
+  filter(primary_type %in% head(chicago_summary$primary_type, 5)) %>%
+  ggplot(aes(x=primary_type, fill=primary_type)) +
   geom_bar(width = 0.5) +
   coord_flip() +
   theme_classic() +
@@ -93,10 +93,11 @@ chicago %>%
 # per month
 # exclude May
 chicago %>%
-  dplyr::select(MONTH, Primary.Type) %>%
-  filter(Primary.Type %in% chicago_summary$Primary.Type[1:5], MONTH != 05) %>% 
-  count(MONTH, Primary.Type) %>%
-  ggplot(aes(MONTH, n, group = Primary.Type, color = Primary.Type)) +
+  dplyr::select(month, primary_type, year) %>%
+  filter(primary_type %in% chicago_summary$primary_type[1:5], year == 2020) %>% 
+  count(month, primary_type) %>%
+  na.omit() %>%
+  ggplot(aes(month, n, group = primary_type, color = primary_type)) +
   geom_line() +
   scale_color_brewer(palette = "Set1") +
   ggtitle("Monthly frequency of top 5 crime in chicago in 2020")
@@ -105,16 +106,28 @@ chicago %>%
 
 # daily
 chicago %>%
-  dplyr::select(date, Primary.Type) %>%
-  filter(Primary.Type %in% chicago_summary$Primary.Type[1:5]) %>%
-  count(date, Primary.Type) %>%
-  ggplot(aes(date, n, group = Primary.Type, color = Primary.Type)) +
+  dplyr::select(Date, primary_type, year) %>%
+  filter(primary_type %in% chicago_summary$primary_type[1:5], year == 2020) %>%
+  count(Date, primary_type) %>%
+  na.omit() %>%
+  ggplot(aes(Date, n, group = primary_type, color = primary_type)) +
   geom_line() +
-  facet_wrap(~Primary.Type) +
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(chicago_summary$Primary.Type[1:5]))) +
+  facet_wrap(~primary_type) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(chicago_summary$primary_type[1:5]))) +
   ggtitle("Frequency of top 5 crime in Chicago in 2020")
 
 # looks life theft is seeing sharp drop
+
+# year to year comparison
+chicago %>%
+  dplyr::select(y_month, month, primary_type, year) %>%
+  filter(primary_type %in% chicago_summary$primary_type[1:5]) %>%
+  count(year, month, primary_type) %>%
+  na.omit() %>%
+  ggplot(aes(x=month, y=n, group = year, color = as.character(year))) +
+  geom_line() +
+  facet_wrap(~primary_type) +
+  ggtitle("year to year comparison of the top 5 crime in Chicago in the past 6 years")
 ```
 
 ## VAR 
@@ -122,10 +135,10 @@ chicago %>%
 ```{r extract cases}
 # extract top 5 crime
 top5crime <- chicago %>%
-  filter(Primary.Type %in% head(chicago_summary$Primary.Type, 5)) %>%
-  group_by(date, Primary.Type) %>%
+  filter(primary_type %in% head(chicago_summary$primary_type, 5)) %>%
+  group_by(Date, primary_type) %>%
   tally() %>%
-  spread(Primary.Type, n)
+  spread(primary_type, n)
 
 # rename columns
 colnames(top5crime) <- c('time',
@@ -149,24 +162,10 @@ top5crime_diff <- na.omit(diff(top5crime_xts))
 
 ### Step 2: Construct combined time series
 ## COVID 19 RELATED
-```{r covid 19 extract Pennsylvania data}
-# extract Pennsylvania data from US data. 
-covid19_IL <- covid19("USA", level = 2) %>%
-  filter(administrative_area_level_2 == "Illinois") %>%
-  # filter out days when confirmed is zero
-  filter(confirmed > 0)
-
-# calculate the difference per day
-covid19_IL_diff <- data.frame(diff(covid19_IL$confirmed))
-colnames(covid19_IL_diff)[1] = "confirmed"
-covid19_IL_diff$date = covid19_IL$date[2:length(covid19_IL$date)]
-
-head(covid19_IL)
-```
 
 ```{r covid 19 related exploration}
 # extract for tranforming into time series data
-ts_IL <- covid19_IL %>% 
+ts_CH <- covid19_IL %>% 
   dplyr::select(date, confirmed) %>%
   ts_xts()
 
