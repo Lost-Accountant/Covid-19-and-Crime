@@ -170,13 +170,13 @@ ts_CH <- covid19_IL %>%
   ts_xts()
 
 # plot time series of IL infection
-ts_plot(ts_IL)
+ts_plot(ts_CH)
 # conduct ADF Test
-adf.test(as.ts(ts_IL))
+adf.test(as.ts(ts_CH))
 # not stationary!
 
 # try first log difference
-ts_diff_IL <- diff(ts_IL)
+ts_diff_IL <- diff(ts_CH)
 ts_plot(ts_diff_IL)
 # still clearly not stationary
 # need de-trend
