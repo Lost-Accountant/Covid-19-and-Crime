@@ -290,7 +290,6 @@ summary(VAR_assault)
 causality(VAR_assault, cause = colnames(combined_diff)[1])
 causality(VAR_assault, cause = "residuals")
 ```
-COVID-19 may help to predict assault (p-value = 0.05525)
 
 ```{r}
 causality(VAR_battery, cause = colnames(combined_diff)[2])
