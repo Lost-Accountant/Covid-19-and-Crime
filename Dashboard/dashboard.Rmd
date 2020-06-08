@@ -126,7 +126,9 @@ ts_diff_CH <- na.omit(diff(ts_CH))
 
 dygraph(ts_diff_CH,
          main = "Daily confirmed cases of
-         COVID19 in Chicago")
+         COVID-19 in Chicago")%>%
+  dySeries("cd7b965f", label = "Chicago")%>%
+  dyLegend(show = "always", hideOnMouseOut = FALSE)
 
 
 covid19_CH_diff <- data.frame(diff(covid19_CH$confirmed))
@@ -202,28 +204,271 @@ ggplotly(plt)
 ```   
  
 ### Assault
-    
-```{r}
+
+```{r assault summary}
+assault <- chicago %>%
+  filter(primary_type == 'ASSAULT') %>%
+  group_by(Date) %>%
+  summarise(daily_freq = n())
+
+assault_monthly <- chicago %>%
+  # exclude May due to incomplete data
+  filter(primary_type == "ASSAULT",
+         y_month != '2020-06') %>%
+  group_by(y_month) %>%
+  summarise(monthly_freq = n())
+
+# change colname name for time series
+colnames(assault)[1] <- "time"
+colnames(assault_monthly)[1] <- "time"
+
+# convert to xts time series
+assault_xts <- ts_xts(na.omit(assault))
+assault_monthly_xts <- ts_xts(assault_monthly)
+
+assault_diff_xts <- na.omit(diff(assault_xts))
+assault_diff_xts <- assault_diff_xts[paste(start(CH_res_ts),end(assault_diff_xts), sep = "/")]
+
+# auto arima model
+assault_ar_auto <- forecast::auto.arima(as.ts(assault_diff_xts))
+assault_ar_auto
+
+# artificial neural network model
+assault_ann <- nnetar(as.ts(assault_diff_xts), size = 10)
+assault_ann
+```
+
+```{r assault}
+# auto arima model
+
+assault_ar_auto %>% 
+  forecast() %>%
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily forcast for assault in Chicago', ylab = 'Daily (expected) cases') %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector()
+
+# neural network
+assault_ann %>% 
+  forecast() %>%
+  {cbind(actuals=.$x, forecast_mean=.$mean)} %>%
+  dygraph() %>%
+  dyRangeSelector()
+
 ```
 
 ### Battery
     
-```{r}
+```{r battery summary}
+battery <- chicago %>%
+  filter(primary_type == 'BATTERY') %>%
+  group_by(Date) %>%
+  summarise(daily_freq = n())
+
+battery_monthly <- chicago %>%
+  # exclude May due to incomplete data
+  filter(primary_type == "BATTERY",
+         y_month != '2020-06') %>%
+  group_by(y_month) %>%
+  summarise(monthly_freq = n())
+
+# change colname name for time series
+colnames(battery)[1] <- "time"
+colnames(battery_monthly)[1] <- "time"
+
+# convert to xts time series
+battery_xts <- ts_xts(na.omit(battery))
+battery_monthly_xts <- ts_xts(battery_monthly)
+
+battery_diff_xts <- na.omit(diff(battery_xts))
+battery_diff_xts <- battery_diff_xts[paste(start(CH_res_ts),end(battery_diff_xts), sep = "/")]
+
+# auto arima model
+battery_ar_auto <- forecast::auto.arima(as.ts(battery_diff_xts))
+battery_ar_auto
+```
+
+```{r battery}
+# auto arima model
+
+battery_ar_auto %>% 
+  forecast() %>%
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily forcast for battery in Chicago', ylab = 'Daily (expected) cases') %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector()
+
 ```
 
 ### Criminal Damage
     
-```{r}
+```{r criminal summary}
+criminal<- chicago %>%
+  filter(primary_type == 'CRIMINAL DAMAGE') %>%
+  group_by(Date) %>%
+  summarise(daily_freq = n())
+
+criminal_monthly <- chicago %>%
+  # exclude May due to incomplete data
+  filter(primary_type == "CRIMINAL DAMAGE",
+         y_month != '2020-06') %>%
+  group_by(y_month) %>%
+  summarise(monthly_freq = n())
+
+# change colname name for time series
+colnames(criminal)[1] <- "time"
+colnames(criminal_monthly)[1] <- "time"
+
+# convert to xts time series
+criminal_xts <- ts_xts(na.omit(criminal))
+criminal_monthly_xts <- ts_xts(criminal_monthly)
+
+criminal_diff_xts <- na.omit(diff(criminal_xts))
+criminal_diff_xts <- criminal_diff_xts[paste(start(CH_res_ts),end(criminal_diff_xts), sep = "/")]
+
+# auto arima model
+criminal_ar_auto <- forecast::auto.arima(as.ts(criminal_diff_xts))
+criminal_ar_auto
+```
+
+```{r criminal}
+# auto arima model
+
+criminal_ar_auto %>% 
+    forecast() %>%
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily forcast for criminal damage in Chicago', 
+          ylab = 'Daily (expected) cases') %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector()
+
 ```
 
 ### Deceptive Practice
     
-```{r}
+```{r deceptive summary}
+deceptive<- chicago %>%
+  filter(primary_type == 'DECEPTIVE PRACTICE') %>%
+  group_by(Date) %>%
+  summarise(daily_freq = n())
+
+deceptive_monthly <- chicago %>%
+  # exclude May due to incomplete data
+  filter(primary_type == "DECEPTIVE PRACTICE",
+         y_month != '2020-06') %>%
+  group_by(y_month) %>%
+  summarise(monthly_freq = n())
+
+# change colname name for time series
+colnames(deceptive)[1] <- "time"
+colnames(deceptive_monthly)[1] <- "time"
+
+# convert to xts time series
+deceptive_xts <- ts_xts(na.omit(deceptive))
+deceptive_monthly_xts <- ts_xts(deceptive_monthly)
+
+deceptive_diff_xts <- na.omit(diff(deceptive_xts))
+deceptive_diff_xts <- deceptive_diff_xts[paste(start(CH_res_ts),end(deceptive_diff_xts), sep = "/")]
+
+# auto arima model
+deceptive_ar_auto <- forecast::auto.arima(as.ts(deceptive_diff_xts))
+deceptive_ar_auto
+```
+
+```{r deceptive}
+# auto arima model
+
+deceptive_ar_auto %>% 
+    forecast() %>%
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily forcast for deceptive practice in Chicago', 
+          ylab = 'Daily (expected) cases') %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector()
+
 ```
 
 ###Theft
     
-```{r}
+```{r theft summary}
+theft <- chicago %>%
+  filter(primary_type == "THEFT") %>%
+  group_by(Date) %>%
+  summarise(daily_freq = n())
+
+theft_monthly <- chicago %>%
+  # exclude May due to incomplete data
+  filter(primary_type == "THEFT",
+         y_month != '2020-06') %>%
+  group_by(y_month) %>%
+  summarise(monthly_freq = n())
+
+# change colname name for time series
+colnames(theft)[1] <- "time"
+colnames(theft_monthly)[1] <- "time"
+
+# convert to xts time series
+theft_xts <- ts_xts(na.omit(theft))
+theft_monthly_xts <- ts_xts(theft_monthly)
+
+theft_diff_xts <- na.omit(diff(theft_xts))
+theft_diff_xts <- theft_diff_xts[paste(start(CH_res_ts),end(theft_diff_xts), sep = "/")]
+
+# auto arima model
+theft_ar_auto <- forecast::auto.arima(as.ts(theft_diff_xts))
+theft_ar_auto
+```
+
+```{r THEFT}
+# auto arima model
+
+theft_ar_auto %>% 
+  forecast() %>%
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily forcast for theft in Chicago', ylab = 'Daily (expected) cases') %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector()
+
 ```
 
 
@@ -287,7 +532,10 @@ ts_CH <- covid19_CH %>%
 
 ts_diff_CH <- na.omit(diff(ts_CH))
 
-dygraph(ts_diff_CH)%>%  dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red")
+dygraph(ts_diff_CH)%>%  
+  dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red")%>%
+  dySeries("cd7b965f", label = "Chicago")%>%
+  dyLegend(show = "always", hideOnMouseOut = FALSE)
 
 
 covid19_CH_diff <- data.frame(diff(covid19_CH$confirmed))
