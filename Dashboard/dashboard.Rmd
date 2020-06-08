@@ -1,0 +1,261 @@
+---
+title: "COVID-19 and US Crime"
+author: ""
+output: 
+  flexdashboard::flex_dashboard:
+    theme: flatly
+    orientation: rows
+    social: menu
+    source: embed
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(plotly)
+library(plyr)
+library(flexdashboard)
+library(RSocrata)
+library(tidyverse)
+library(tsbox) # transform data into time series
+library(xts)
+library(COVID19) # to get data about covid 19
+library(aTSA) # adf.test
+library(forecast) #ariRI model
+library(vars) #VAR and Causality
+library(dygraphs)
+library(leaflet)
+library(htmlwidgets)
+#[INCOMPLETE] Graphs in Chicago have been converted here to Plotly HTML Widgets 
+# Make some noisily increasing data [Testing Purposes]
+set.seed(955)
+dat <- data.frame(cond = rep(c("A", "B"), each=10),
+                  xvar = 1:20 + rnorm(20,sd=3),
+                  yvar = 1:20 + rnorm(20,sd=3))
+
+#Load Chicago Data
+covid19_CH <- covid19("USA", level = 3) %>%
+  # this cook county contains chicago
+  filter(administrative_area_level_3 == "Cook",
+         administrative_area_level_2 == "Illinois" ) %>%
+  # filter out days when confirmed is zero or one
+  # becasue when it was 2 for a very long time
+  filter(confirmed > 2)
+
+```
+
+Overview {.storyboard}
+=======================================================================
+
+### Introduction
+
+```{r}
+
+Location <- c("Providence ","Los Angeles","Chicago","Boston","Seattle","Atlanta","Philadelphia" )
+lat <- c(41.8240,33.82377,41.78798,42.361145,47.714965,33.753746, 39.952583)
+lng <- c( -71.4128,-118.2668,-87.7738,-71.057083,-122.127166 ,-84.386330,-75.165222)
+df <- data.frame(Location, lat,lng)
+ jsCode <- paste0('
+ function(el, x) {
+  var marker = document.getElementsByClassName("leaflet-marker-icon leaflet-zoom-animated leaflet-interactive");
+  marker[0].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#providence");};
+  marker[1].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#los-angeles");};
+  marker[2].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#chicago");};
+  marker[3].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#boston");};
+  marker[4].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#seattle");};
+  marker[5].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#atlanta");};
+  marker[6].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#philadelphia");};
+}
+ ')
+m <- leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addMarkers(data=df,)%>%
+   onRender(jsCode)
+m  # Print the map
+```
+
+***
+
+We explore the effect of COVID-19 pandemic on crime rates across different cities in the US to get a glimpse into the future of crime in these unprecedented circumstances. 
+
+Our goal is to use COVID and Crime data to make future predictions on crime rates in this pandemic. We also look at the crime rates before and after the pandemic to gain insight into how quarantine and self-isolation measures influence human behaviour leading to an increase in specific types of crime.
+
+Click on the location markers on the left to view their analysis !
+
+### Key Results
+
+```{r}
+```
+
+***
+
+Some text desccription
+
+### Coming Soon
+
+```{r}
+```
+
+***
+
+Some text desccription
+
+
+  
+Chicago
+=======================================================================
+
+Row{.tabset .tabset-fade }
+-------------------------------------
+   
+
+### Chart 1
+```{r, echo = FALSE}
+#Overview of the data 
+# plot cumulative cases
+# extract for transforming into time series
+ts_CH <- covid19_CH %>%
+  dplyr::select(date, confirmed) %>%
+  ts_xts()
+
+#Html Time Series Widgets (Double Click to reset)
+dygraph(ts_CH,main = "Cumulative confirmed cases
+         of COVID 19 in Chicago")
+
+
+covid19_CH_diff <- data.frame(diff(covid19_CH$confirmed))
+colnames(covid19_CH_diff)[1] = "confirmed"
+covid19_CH_diff$date = covid19_CH$date[2:length(covid19_CH$date)]
+```
+
+### Chart 2
+
+```{r}
+
+n <- 20
+x1 <- rnorm(n); x2 <- rnorm(n)
+y1 <- 2 * x1 + rnorm(n)
+y2 <- 3 * x2 + (2 + rnorm(n))
+A <- as.factor(rep(c(1, 2), each = n))
+df <- data.frame(x = c(x1, x2), y = c(y1, y2), A = A)
+fm <- lm(y ~ x + A, data = df)
+
+p <- ggplot(data = cbind(df, pred = predict(fm)), aes(x = x, y = y, color = A))
+p <- p + geom_point() + geom_line(aes(y = pred))
+ggplotly(p)
+```   
+
+### Chart 3
+    
+```{r}
+
+p <- ggplot(dat, aes(x=xvar, y=yvar)) +
+            geom_point(shape=1) +    # Use hollow circles
+            geom_smooth()            # Add a loess smoothed fit curve with confidence region
+ggplotly(p)
+```
+
+
+
+
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+   
+### Chart 1
+
+```{r}
+ts_CH <- covid19_CH %>%
+  dplyr::select(date, confirmed) %>%
+  ts_xts()
+
+ts_diff_CH <- na.omit(diff(ts_CH))
+
+dygraph(ts_diff_CH,
+         main = "Daily confirmed cases of
+         COVID19 in Chicago")
+
+```   
+ 
+### Chart 2
+    
+```{r}
+```
+
+
+
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+
+
+
+
+### Chart 1
+
+```{r}
+
+# if (exists("chicago")) is.data.frame(get("chicago")) else chicago <- RSocrata::read.socrata(
+#   "https://data.cityofchicago.org/resource/ijzp-q8t2.csv?$where=year >= 2014",
+#   app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+# 
+# 
+# # add date
+# chicago <- chicago %>%
+#   mutate(Date = substr(date, start = 1, stop = 10)) %>%
+#   mutate(y_month  = substr(date, start = 1, stop = 7)) %>%
+#   mutate(month = substr(date, start = 6, stop = 7))
+# 
+# # summary of all crime
+# chicago_summary <- chicago %>%
+#   group_by(primary_type) %>%
+#   summarise(number_of_crime = n()) %>%
+#   arrange(desc(number_of_crime))
+# 
+# # looks life theft is seeing sharp drop
+# 
+# # year to year comparison
+# plt <- chicago %>%
+#   dplyr::select(y_month, month, primary_type, year) %>%
+#   filter(primary_type %in% chicago_summary$primary_type[1:5]) %>%
+#   count(year, month, primary_type) %>%
+#   na.omit()%>% ggplot(aes(x=month, y=n, group = year, color = as.character(year))) + geom_line() + facet_free(~primary_type,scales = "free", space = "free")+xlab("Month") +
+#            ylab("Cases") + theme(legend.title = element_blank())
+# 
+# ggplotly(plt)
+
+#TEST CHUNK UNCOMMENT TO REDUCE FILE RUN TIME [Design]
+n <- 20
+x1 <- rnorm(n); x2 <- rnorm(n)
+y1 <- 2 * x1 + rnorm(n)
+y2 <- 3 * x2 + (2 + rnorm(n))
+A <- as.factor(rep(c(1, 2), each = n))
+df <- data.frame(x = c(x1, x2), y = c(y1, y2), A = A)
+fm <- lm(y ~ x + A, data = df)
+
+p <- ggplot(data = cbind(df, pred = predict(fm)), aes(x = x, y = y, color = A))
+p <- p + geom_point() + geom_line(aes(y = pred))
+ggplotly(p)
+
+```
+
+
+
+
+Providence
+=======================================================================
+
+Boston
+=======================================================================
+
+Philadelphia
+=======================================================================
+
+Los Angeles
+=======================================================================
+
+Atlanta
+=======================================================================
+
+Seattle
+=======================================================================
