@@ -104,7 +104,11 @@ Some text desccription
 Chicago
 =======================================================================
 
-Row{.tabset .tabset-fade }
+
+
+
+
+Row{data-height=300 .tabset .tabset-fade }
 -------------------------------------
    
 
@@ -113,13 +117,16 @@ Row{.tabset .tabset-fade }
 #Overview of the data 
 # plot cumulative cases
 # extract for transforming into time series
+
 ts_CH <- covid19_CH %>%
   dplyr::select(date, confirmed) %>%
   ts_xts()
 
-#Html Time Series Widgets (Double Click to reset)
-dygraph(ts_CH,main = "Cumulative confirmed cases
-         of COVID 19 in Chicago")
+ts_diff_CH <- na.omit(diff(ts_CH))
+
+dygraph(ts_diff_CH,
+         main = "Daily confirmed cases of
+         COVID19 in Chicago")
 
 
 covid19_CH_diff <- data.frame(diff(covid19_CH$confirmed))
@@ -158,40 +165,77 @@ ggplotly(p)
 
 
 
-Row {.tabset .tabset-fade}
+Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
    
-### Chart 1
+### Chicago Crime Summary
 
 ```{r}
-ts_CH <- covid19_CH %>%
-  dplyr::select(date, confirmed) %>%
-  ts_xts()
+if (exists("chicago")) is.data.frame(get("chicago")) else chicago <- RSocrata::read.socrata(
+  "https://data.cityofchicago.org/resource/ijzp-q8t2.csv?$where=year >= 2014",
+  app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
 
-ts_diff_CH <- na.omit(diff(ts_CH))
 
-dygraph(ts_diff_CH,
-         main = "Daily confirmed cases of
-         COVID19 in Chicago")
+# add date
+chicago <- chicago %>%
+  mutate(Date = substr(date, start = 1, stop = 10)) %>%
+  mutate(y_month  = substr(date, start = 1, stop = 7)) %>%
+  mutate(month = substr(date, start = 6, stop = 7))
 
+# summary of all crime
+chicago_summary <- chicago %>%
+  group_by(primary_type) %>%
+  summarise(number_of_crime = n()) %>%
+  arrange(desc(number_of_crime))
+
+# looks life theft is seeing sharp drop
+
+# year to year comparison
+plt <- chicago %>%
+  dplyr::select(y_month, month, primary_type, year) %>%
+  filter(primary_type %in% chicago_summary$primary_type[1:5]) %>%
+  count(year, month, primary_type) %>%
+  na.omit()%>% ggplot(aes(x=month, y=n, group = year, color = as.character(year))) + geom_line() + facet_free(~primary_type,scales = "free", space = "free")+xlab("Month") +
+           ylab("Cases") + theme(legend.title = element_blank())
+
+ggplotly(plt)
 ```   
  
-### Chart 2
+### Assault
+    
+```{r}
+```
+
+### Battery
+    
+```{r}
+```
+
+### Criminal Damage
+    
+```{r}
+```
+
+### Deceptive Practice
+    
+```{r}
+```
+
+###Theft
     
 ```{r}
 ```
 
 
 
-
-Row {.tabset .tabset-fade}
+Row {data-height=300} 
 -----------------------------------------------------------------------
 
 
 
 
 
-### Chart 1
+### Daily confirmed cases of COVID19 in Chicago
 
 ```{r}
 
@@ -225,22 +269,42 @@ Row {.tabset .tabset-fade}
 # ggplotly(plt)
 
 #TEST CHUNK UNCOMMENT TO REDUCE FILE RUN TIME [Design]
-n <- 20
-x1 <- rnorm(n); x2 <- rnorm(n)
-y1 <- 2 * x1 + rnorm(n)
-y2 <- 3 * x2 + (2 + rnorm(n))
-A <- as.factor(rep(c(1, 2), each = n))
-df <- data.frame(x = c(x1, x2), y = c(y1, y2), A = A)
-fm <- lm(y ~ x + A, data = df)
+# n <- 20
+# x1 <- rnorm(n); x2 <- rnorm(n)
+# y1 <- 2 * x1 + rnorm(n)
+# y2 <- 3 * x2 + (2 + rnorm(n))
+# A <- as.factor(rep(c(1, 2), each = n))
+# df <- data.frame(x = c(x1, x2), y = c(y1, y2), A = A)
+# fm <- lm(y ~ x + A, data = df)
+# 
+# p <- ggplot(data = cbind(df, pred = predict(fm)), aes(x = x, y = y, color = A))
+# p <- p + geom_point() + geom_line(aes(y = pred))
+# ggplotly(p)
 
-p <- ggplot(data = cbind(df, pred = predict(fm)), aes(x = x, y = y, color = A))
-p <- p + geom_point() + geom_line(aes(y = pred))
-ggplotly(p)
+ts_CH <- covid19_CH %>%
+  dplyr::select(date, confirmed) %>%
+  ts_xts()
 
+ts_diff_CH <- na.omit(diff(ts_CH))
+
+dygraph(ts_diff_CH)%>%  dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red")
+
+
+covid19_CH_diff <- data.frame(diff(covid19_CH$confirmed))
+colnames(covid19_CH_diff)[1] = "confirmed"
+covid19_CH_diff$date = covid19_CH$date[2:length(covid19_CH$date)]
 ```
 
 
+### Summary
 
+This is text [link](http://www.example.com)
+
+- one
+- two 
+- three
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
 Providence
 =======================================================================
