@@ -393,10 +393,16 @@ autoplot(forecast$forecast$larceny_from_vehicle) +
   ggtitle("Prediction on how many more larceny from vehicle cases compared to yesterday") +
   theme_classic() +
   ylab("Day-to-day change") +
-  theme(axis.text.x=element_blank()) +
-  xlab("")
-autoplot(forecast$forecast$residuals)
+  xlab(paste("Numebr of days since", common_time[1]))
 
+autoplot(forecast$forecast$residuals) +
+  ggtitle("Prediction on how many more covid19 cases compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
+
+
+### THE FOLLOWINGS ARE NOT FOR DISPLAY
 accu_compare <- data.frame(rbind(accuracy(VAR_vehicle$varresult[[1]])))
 rownames(accu_compare) <- c('larceny from vehicle')
 kableExtra::kable(accu_compare, format = 'markdown')
