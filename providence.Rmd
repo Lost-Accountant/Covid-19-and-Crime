@@ -345,6 +345,19 @@ irf_vehicle2 <- irf(VAR_vehicle,
 
 plot(irf_vehicle1)
 plot(irf_vehicle2)
+
+lags = c(1:25)
+
+irf1 <- data.frame(irf_vehicle1$irf$larceny_from_vehicle[,1],
+                   irf_vehicle1$Lower$larceny_from_vehicle[,1],
+                   irf_vehicle1$Upper$larceny_from_vehicle[,1])
+
+colnames(irf1) <- c("mean", "lower", "upper")
+ggplot(irf1, aes(x = lags)) +
+  geom_line(aes(y = mean)) +
+  geom_line(aes(y = upper), color = "red") +
+  geom_line(aes(y = lower), color = "red") +
+  geom_hline(yintercept = 0, color = "blue")
 ```
 
 ### Step 8: Forecast
