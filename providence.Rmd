@@ -343,28 +343,52 @@ irf_vehicle2 <- irf(VAR_vehicle,
                     response = "larceny_from_vehicle",
                     n.ahead = 24)
 
-plot(irf_vehicle1)
-plot(irf_vehicle2)
-
+# ggplot version of irf
 lags = c(1:25)
 
-irf1 <- data.frame(irf_vehicle1$irf$larceny_from_vehicle[,1],
+irf_vehicle_1_gg <- data.frame(irf_vehicle1$irf$larceny_from_vehicle[,1],
                    irf_vehicle1$Lower$larceny_from_vehicle[,1],
                    irf_vehicle1$Upper$larceny_from_vehicle[,1])
 
-colnames(irf1) <- c("mean", "lower", "upper")
-ggplot(irf1, aes(x = lags)) +
-  geom_line(aes(y = mean)) +
-  geom_line(aes(y = upper), color = "red") +
-  geom_line(aes(y = lower), color = "red") +
-  geom_hline(yintercept = 0, color = "blue")
+colnames(irf_vehicle_1_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_vehicle_1_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  #geom_line(aes(y = upper), color = "red", linetype = "dashed") +
+  #geom_line(aes(y = lower), color = "red", linetype = "dashed") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more daily covid19 cases there will be after 1 larceny from vehicle") +
+  xlab("Number of days after a larceny from vehicle")+
+  ylab("Number of covid 19 cases")
+
+
+irf_vehicle_2_gg <- data.frame(irf_vehicle2$irf$residuals[,1],
+                              irf_vehicle2$Lower$residuals[,1],
+                              irf_vehicle2$Upper$residuals[,1])
+
+colnames(irf_vehicle_2_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_vehicle_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  #geom_line(aes(y = upper), color = "red", linetype = "dashed") +
+  #geom_line(aes(y = lower), color = "red", linetype = "dashed") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more larceny from vechile cases per day there will be after 1 confirmed covid19 case") +
+  xlab("Number of days after a confimed covid 19")+
+  ylab("Number of larceny from vechile")
+# this one not really significant at a bit above 0.05 and the impact is not even -1.0. So could be okay to leave this out as well.
 ```
 
 ### Step 8: Forecast
 ```{r var forecast}
-forecast(VAR_vehicle) %>%
-  autoplot()
+forecast <- forecast(VAR_vehicle)
 
+autoplot(forecast$forecast$larceny_from_vehicle)
+autoplot(forecast$forecast$residuals)
 
 accu_compare <- data.frame(rbind(accuracy(VAR_vehicle$varresult[[1]])))
 rownames(accu_compare) <- c('larceny from vehicle')
