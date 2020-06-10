@@ -348,8 +348,6 @@ covid-19 is significant to vehicle theft (p-value = 0.018)
 
 ### Step 7: Impulse Response Function
 
-Assault, criminal damage and theft have granger causality.
-
 ```{r irf}
 # use car theft and criminal damage
 par(mfrow = c(1,2))
@@ -484,7 +482,7 @@ autoplot(forecast_criminal$forecast$criminal) +
   xlab(paste("Numebr of days since", common_time[1]))
 
 autoplot(forecast_vehicle$forecast$vehicle) +
-  ggtitle("Prediction on how many mroe vehicle theft cases
+  ggtitle("Prediction on how many more vehicle theft cases
           compared to yesterday") +
   theme_classic() +
   ylab("Day-to-day change") +
