@@ -128,7 +128,8 @@ chicago %>%
 # year to year comparison
 chicago %>%
   dplyr::select(y_month, month, primary_type, year) %>%
-  filter(primary_type %in% chicago_summary$primary_type[1:5]) %>%
+  filter(primary_type %in% chicago_summary$primary_type[1:5],
+         y_month != "2020-06") %>%
   count(year, month, primary_type) %>%
   na.omit() %>%
   ggplot(aes(x=month, y=n, group = year, color = as.character(year))) +
