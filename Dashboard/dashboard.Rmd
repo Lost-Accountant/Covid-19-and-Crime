@@ -19,7 +19,6 @@ library(tidyverse)
 library(tsbox) # transform data into time series
 library(xts)
 library(COVID19) # to get data about covid 19
-library(aTSA) # adf.test
 library(forecast) #ariRI model
 library(vars) #VAR and Causality
 library(dygraphs)
@@ -108,59 +107,221 @@ Chicago
 
 
 
-Row{data-height=300 .tabset .tabset-fade }
+Row{data-height=300}
 -------------------------------------
    
 
-### Chart 1
-```{r, echo = FALSE}
-#Overview of the data 
-# plot cumulative cases
-# extract for transforming into time series
+### Impulse response function (criminal damage)
+```{r get the data for this city}
+if (exists("chicago")) is.data.frame(get("chicago")) else chicago <- RSocrata::read.socrata(
+  "https://data.cityofchicago.org/resource/ijzp-q8t2.csv?$where=year >= 2014",
+  app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+```
 
-ts_CH <- covid19_CH %>%
+```{r}
+# add date
+chicago <- chicago %>%
+  mutate(Date = substr(date, start = 1, stop = 10)) %>%
+  mutate(y_month  = substr(date, start = 1, stop = 7)) %>%
+  mutate(month = substr(date, start = 6, stop = 7))
+
+# summary of all crime
+chicago_summary <- chicago %>%
+  group_by(primary_type) %>%
+  summarise(number_of_crime = n()) %>%
+  arrange(desc(number_of_crime))
+```
+
+```{r extract cases}
+# extract top 5 crime
+top5crime <- chicago %>%
+  filter(primary_type %in% head(chicago_summary$primary_type, 5)) %>%
+  group_by(Date, primary_type) %>%
+  tally() %>%
+  spread(primary_type, n)
+
+# rename columns
+colnames(top5crime) <- c('time',
+                         "assault",
+                         "battery",
+                         "criminal",
+                         'deceptive',
+                         "theft")
+top5crime <- na.omit(top5crime)
+# create time series
+top5crime_xts <- ts_xts(top5crime[,1:2])
+
+for (i in (3:ncol(top5crime))){
+  temp_xts <- ts_xts(top5crime[, c(1,i)])
+  top5crime_xts <- merge(top5crime_xts, temp_xts)
+}
+
+# extract difference, change per day
+top5crime_diff <- na.omit(diff(top5crime_xts))
+```
+
+```{r covid 19 related exploration, message=F, warning=F}
+# extract for tranforming into time series data
+ts_CH <- covid19_CH %>% 
   dplyr::select(date, confirmed) %>%
   ts_xts()
 
+# try first log difference
 ts_diff_CH <- na.omit(diff(ts_CH))
-
-dygraph(ts_diff_CH,
-         main = "Daily confirmed cases of
-         COVID-19 in Chicago")%>%
-  dySeries("cd7b965f", label = "Chicago")%>%
-  dyLegend(show = "always", hideOnMouseOut = FALSE)
-
 
 covid19_CH_diff <- data.frame(diff(covid19_CH$confirmed))
 colnames(covid19_CH_diff)[1] = "confirmed"
 covid19_CH_diff$date = covid19_CH$date[2:length(covid19_CH$date)]
+
+# time as integer
+covid19_CH_diff$timeInt = as.numeric(covid19_CH_diff$date)
+# make a copy to avoid perfect collinearity
+covid19_CH_diff$timeIid = covid19_CH_diff$timeInt
+
+# GAMM model
+# 50 too overfit. 15 looks decent
+gamCH <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
+	data=covid19_CH_diff, family=poisson(link='log'))
+
+toPredict = data.frame(time = seq(covid19_CH_diff$date[1], 
+                                          covid19_CH_diff$date[length(covid19_CH_diff$date)],
+                                  by = '1 day'))
+toPredict$timeInt = as.numeric(toPredict$time)
+# obtain forecast
+forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamCH$gam, toPredict, se.fit=TRUE))))
+
+# access residuals
+CH_res <- data.frame(covid19_CH_diff$confirmed - forecast$fit)
+
+# transform into time series
+CH_res$time = covid19_CH_diff$date
+colnames(CH_res)[1] = "residuals"
+
+col_order <- c("time", "residuals")
+CH_res <- CH_res[, col_order]
+
+CH_res_ts <- ts_xts(CH_res)
 ```
 
-### Chart 2
+```{r top 5 crime VAR}
+# specify common time range
+# start from when covid was a thing
+# end on May 25, to avoid effect of protests related to George Floyid.
+common_time <- seq.Date(start(CH_res_ts), as.Date("2020-05-25"), by = "day")
 
+# combine time series of crime and covid
+combined_diff <- merge(top5crime_diff[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")],
+                       CH_res_ts[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")])
+
+```
+
+```{r construct var}
+optimal_assault <- VARselect(na.omit(combined_diff)[,c(1,6)], type = 'none', lag.max = 10)
+optimal_battery <- VARselect(na.omit(combined_diff)[,c(2,6)], type = 'none', lag.max = 10)
+optimal_criminal <- VARselect(na.omit(combined_diff)[,c(3,6)], type = 'none', lag.max = 10)
+optimal_deceptive <- VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
+optimal_theft <- VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
+
+VAR_assault <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=optimal_assault$selection[1])
+VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=optimal_battery$selection[1])
+VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]),
+                    p=optimal_criminal$selection[1])
+VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
+                     p=optimal_deceptive$selection[1])
+VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_theft$selection[1])
+```
+
+```{r, warning=F, message=F}
+vehicle <- chicago %>%
+  filter(primary_type == 'MOTOR VEHICLE THEFT')%>%
+  group_by(date, primary_type) %>%
+  tally() %>%
+  spread(primary_type, n)
+
+colnames(vehicle) <- c('time', 'vehicle')
+vehicle_xts <- ts_xts(na.omit(vehicle)[,1:2])
+vehicle_diff <- na.omit(diff(vehicle_xts))
+
+combined_diff2 <- merge(vehicle_diff[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")],
+                       CH_res_ts[paste(common_time[1],
+                                            common_time[length(common_time)],
+                                            sep = "/")])
+optimal_vehicle <- VARselect(na.omit(combined_diff2)[,c(1,2)], type = 'none', lag.max = 10)
+VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff2)[,c(1,2)]), p=optimal_vehicle$selection[1])
+```
+
+```{r irf}
+# use car theft and criminal damage
+par(mfrow = c(1,2))
+lags = c(1:25)
+
+# criminal damange
+# only significant one is from covid to crime
+irf_criminal_2 <- irf(VAR_criminal, 
+                         impulse = "residuals", 
+                         response = "criminal", 
+                         n.ahead = 24,
+                         ortho = F)
+
+
+# ggplot version of it.
+irf_criminal_2_gg <- data.frame(
+  irf_criminal_2$irf$residuals[,1],
+  irf_criminal_2$Lower$residuals[,1],
+  irf_criminal_2$Upper$residuals[,1]
+)
+
+colnames(irf_criminal_2_gg) <- c("mean", "lower", "upper")
+
+i1 <- ggplot(irf_criminal_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more criminal damage cases per day there will be
+          after 1 confirmed COVID-19 case") +
+  xlab("Number of days after 1 COVID-19 case")+
+  ylab("Number of criminal damange per day")
+
+ggplotly(i1)
+```
+
+### Impulse response function (vehicle theft)
 ```{r}
+# vehicle theft
+# only significant one is from covid to crime
+irf_vehicle_2 <- irf(VAR_vehicle,
+                     impulse = "residuals",
+                     response = "vehicle",
+                     n.ahead = 24)
 
-n <- 20
-x1 <- rnorm(n); x2 <- rnorm(n)
-y1 <- 2 * x1 + rnorm(n)
-y2 <- 3 * x2 + (2 + rnorm(n))
-A <- as.factor(rep(c(1, 2), each = n))
-df <- data.frame(x = c(x1, x2), y = c(y1, y2), A = A)
-fm <- lm(y ~ x + A, data = df)
 
-p <- ggplot(data = cbind(df, pred = predict(fm)), aes(x = x, y = y, color = A))
-p <- p + geom_point() + geom_line(aes(y = pred))
-ggplotly(p)
-```   
+# ggplot version of it
+irf_vehicle_2_gg <- data.frame(
+  irf_vehicle_2$irf$residuals[,1],
+  irf_vehicle_2$Lower$residuals[,1],
+  irf_vehicle_2$Upper$residuals[,1]
+)
 
-### Chart 3
-    
-```{r}
+colnames(irf_vehicle_2_gg) <- c("mean", "lower", "upper")
 
-p <- ggplot(dat, aes(x=xvar, y=yvar)) +
-            geom_point(shape=1) +    # Use hollow circles
-            geom_smooth()            # Add a loess smoothed fit curve with confidence region
-ggplotly(p)
+i2 <- ggplot(irf_vehicle_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more vehicle theft cases per day there will be
+          after 1 confirmed COVID-19 case") +
+  xlab("Number of days after 1 COVID-19 case")+
+  ylab("Number of vehicle theft per day")
+
+ggplotly(i2)
 ```
 
 
@@ -173,11 +334,6 @@ Row {data-height=400 .tabset .tabset-fade }
 ### Chicago Crime Summary
 
 ```{r}
-if (exists("chicago")) is.data.frame(get("chicago")) else chicago <- RSocrata::read.socrata(
-  "https://data.cityofchicago.org/resource/ijzp-q8t2.csv?$where=year >= 2014",
-  app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
-
-
 # add date
 chicago <- chicago %>%
   mutate(Date = substr(date, start = 1, stop = 10)) %>%
@@ -195,7 +351,7 @@ chicago_summary <- chicago %>%
 # year to year comparison
 plt <- chicago %>%
   dplyr::select(y_month, month, primary_type, year) %>%
-  filter(primary_type %in% chicago_summary$primary_type[1:5]) %>%
+  filter(primary_type %in% chicago_summary$primary_type[1:5], y_month != "2020-06") %>%
   count(year, month, primary_type) %>%
   na.omit()%>% ggplot(aes(x=month, y=n, group = year, color = as.character(year))) + geom_line() + facet_free(~primary_type,scales = "free", space = "free")+xlab("Month") +
            ylab("Cases") + theme(legend.title = element_blank())
@@ -203,275 +359,88 @@ plt <- chicago %>%
 ggplotly(plt)
 ```   
  
-### Assault
+### VAR forecast for criminal damage
 
-```{r assault summary}
-assault <- chicago %>%
-  filter(primary_type == 'ASSAULT') %>%
-  group_by(Date) %>%
-  summarise(daily_freq = n())
+```{r}
+# criminal damange and vehicle theft
+forecast_criminal <- forecast(VAR_criminal)
+forecast_vehicle <- forecast(VAR_vehicle)
+forecast_assault <- forecast(VAR_assault)
+forecast_battery <- forecast(VAR_battery)
+forecast_deceptive <- forecast(VAR_deceptive)
+forecast_theft <- forecast(VAR_theft)
 
-assault_monthly <- chicago %>%
-  # exclude May due to incomplete data
-  filter(primary_type == "ASSAULT",
-         y_month != '2020-06') %>%
-  group_by(y_month) %>%
-  summarise(monthly_freq = n())
+# only impulse from covid are significant
+# only forecast on crime are being helped
+varf1 <- autoplot(forecast_criminal$forecast$criminal) +
+  ggtitle("Prediction on how many more criminal damage cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
 
-# change colname name for time series
-colnames(assault)[1] <- "time"
-colnames(assault_monthly)[1] <- "time"
-
-# convert to xts time series
-assault_xts <- ts_xts(na.omit(assault))
-assault_monthly_xts <- ts_xts(assault_monthly)
-
-assault_diff_xts <- na.omit(diff(assault_xts))
-assault_diff_xts <- assault_diff_xts[paste(start(CH_res_ts),end(assault_diff_xts), sep = "/")]
-
-# auto arima model
-assault_ar_auto <- forecast::auto.arima(as.ts(assault_diff_xts))
-assault_ar_auto
-
-# artificial neural network model
-assault_ann <- nnetar(as.ts(assault_diff_xts), size = 10)
-assault_ann
+ggplotly(varf1)
 ```
 
-```{r assault}
-# auto arima model
+### VAR forecast for vehicle theft
+```{r}
+varf2 <- autoplot(forecast_vehicle$forecast$vehicle) +
+  ggtitle("Prediction on how many more vehicle theft cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
 
-assault_ar_auto %>% 
-  forecast() %>%
-  {cbind(actuals=.$x, forecast_mean=.$mean,
-         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
-         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Daily forcast for assault in Chicago', ylab = 'Daily (expected) cases') %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
-  dySeries(c("lower_80", "forecast_mean", "upper_80"),
-           label = "80%", color = "blue") %>%
-  dySeries(c("lower_95", "forecast_mean", "upper_95"),
-           label = "95%", color = "blue")%>%
-  dyLegend(labelsSeparateLines=TRUE) %>%
-  dyRangeSelector()
-
-# neural network
-assault_ann %>% 
-  forecast() %>%
-  {cbind(actuals=.$x, forecast_mean=.$mean)} %>%
-  dygraph() %>%
-  dyRangeSelector()
-
+ggplotly(varf2)
 ```
 
-### Battery
-    
-```{r battery summary}
-battery <- chicago %>%
-  filter(primary_type == 'BATTERY') %>%
-  group_by(Date) %>%
-  summarise(daily_freq = n())
+### VAR forecast for assault
+```{r}
+varf3 <- autoplot(forecast_assault$forecast$assault) +
+  ggtitle("Prediction on how many more assault cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
 
-battery_monthly <- chicago %>%
-  # exclude May due to incomplete data
-  filter(primary_type == "BATTERY",
-         y_month != '2020-06') %>%
-  group_by(y_month) %>%
-  summarise(monthly_freq = n())
-
-# change colname name for time series
-colnames(battery)[1] <- "time"
-colnames(battery_monthly)[1] <- "time"
-
-# convert to xts time series
-battery_xts <- ts_xts(na.omit(battery))
-battery_monthly_xts <- ts_xts(battery_monthly)
-
-battery_diff_xts <- na.omit(diff(battery_xts))
-battery_diff_xts <- battery_diff_xts[paste(start(CH_res_ts),end(battery_diff_xts), sep = "/")]
-
-# auto arima model
-battery_ar_auto <- forecast::auto.arima(as.ts(battery_diff_xts))
-battery_ar_auto
+ggplotly(varf3)
 ```
 
-```{r battery}
-# auto arima model
+### VAR forecast for battery
+```{r}
+varf4 <- autoplot(forecast_battery$forecast$battery) +
+  ggtitle("Prediction on how many more battery cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
 
-battery_ar_auto %>% 
-  forecast() %>%
-  {cbind(actuals=.$x, forecast_mean=.$mean,
-         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
-         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Daily forcast for battery in Chicago', ylab = 'Daily (expected) cases') %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
-  dySeries(c("lower_80", "forecast_mean", "upper_80"),
-           label = "80%", color = "blue") %>%
-  dySeries(c("lower_95", "forecast_mean", "upper_95"),
-           label = "95%", color = "blue")%>%
-  dyLegend(labelsSeparateLines=TRUE) %>%
-  dyRangeSelector()
-
+ggplotly(varf4)
 ```
 
-### Criminal Damage
-    
-```{r criminal summary}
-criminal<- chicago %>%
-  filter(primary_type == 'CRIMINAL DAMAGE') %>%
-  group_by(Date) %>%
-  summarise(daily_freq = n())
+### VAR forecast for deceptive
+```{r}
+varf5 <- autoplot(forecast_deceptive$forecast$deceptive) +
+  ggtitle("Prediction on how many more deceptive practice cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
 
-criminal_monthly <- chicago %>%
-  # exclude May due to incomplete data
-  filter(primary_type == "CRIMINAL DAMAGE",
-         y_month != '2020-06') %>%
-  group_by(y_month) %>%
-  summarise(monthly_freq = n())
-
-# change colname name for time series
-colnames(criminal)[1] <- "time"
-colnames(criminal_monthly)[1] <- "time"
-
-# convert to xts time series
-criminal_xts <- ts_xts(na.omit(criminal))
-criminal_monthly_xts <- ts_xts(criminal_monthly)
-
-criminal_diff_xts <- na.omit(diff(criminal_xts))
-criminal_diff_xts <- criminal_diff_xts[paste(start(CH_res_ts),end(criminal_diff_xts), sep = "/")]
-
-# auto arima model
-criminal_ar_auto <- forecast::auto.arima(as.ts(criminal_diff_xts))
-criminal_ar_auto
+ggplotly(varf5)
 ```
 
-```{r criminal}
-# auto arima model
+### VAR forecast for theft
+```{r}
+varf6 <- autoplot(forecast_theft$forecast$theft) +
+  ggtitle("Prediction on how many more theft cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
 
-criminal_ar_auto %>% 
-    forecast() %>%
-  {cbind(actuals=.$x, forecast_mean=.$mean,
-         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
-         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Daily forcast for criminal damage in Chicago', 
-          ylab = 'Daily (expected) cases') %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
-  dySeries(c("lower_80", "forecast_mean", "upper_80"),
-           label = "80%", color = "blue") %>%
-  dySeries(c("lower_95", "forecast_mean", "upper_95"),
-           label = "95%", color = "blue")%>%
-  dyLegend(labelsSeparateLines=TRUE) %>%
-  dyRangeSelector()
-
+ggplotly(varf6)
 ```
-
-### Deceptive Practice
-    
-```{r deceptive summary}
-deceptive<- chicago %>%
-  filter(primary_type == 'DECEPTIVE PRACTICE') %>%
-  group_by(Date) %>%
-  summarise(daily_freq = n())
-
-deceptive_monthly <- chicago %>%
-  # exclude May due to incomplete data
-  filter(primary_type == "DECEPTIVE PRACTICE",
-         y_month != '2020-06') %>%
-  group_by(y_month) %>%
-  summarise(monthly_freq = n())
-
-# change colname name for time series
-colnames(deceptive)[1] <- "time"
-colnames(deceptive_monthly)[1] <- "time"
-
-# convert to xts time series
-deceptive_xts <- ts_xts(na.omit(deceptive))
-deceptive_monthly_xts <- ts_xts(deceptive_monthly)
-
-deceptive_diff_xts <- na.omit(diff(deceptive_xts))
-deceptive_diff_xts <- deceptive_diff_xts[paste(start(CH_res_ts),end(deceptive_diff_xts), sep = "/")]
-
-# auto arima model
-deceptive_ar_auto <- forecast::auto.arima(as.ts(deceptive_diff_xts))
-deceptive_ar_auto
-```
-
-```{r deceptive}
-# auto arima model
-
-deceptive_ar_auto %>% 
-    forecast() %>%
-  {cbind(actuals=.$x, forecast_mean=.$mean,
-         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
-         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Daily forcast for deceptive practice in Chicago', 
-          ylab = 'Daily (expected) cases') %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
-  dySeries(c("lower_80", "forecast_mean", "upper_80"),
-           label = "80%", color = "blue") %>%
-  dySeries(c("lower_95", "forecast_mean", "upper_95"),
-           label = "95%", color = "blue")%>%
-  dyLegend(labelsSeparateLines=TRUE) %>%
-  dyRangeSelector()
-
-```
-
-###Theft
-    
-```{r theft summary}
-theft <- chicago %>%
-  filter(primary_type == "THEFT") %>%
-  group_by(Date) %>%
-  summarise(daily_freq = n())
-
-theft_monthly <- chicago %>%
-  # exclude May due to incomplete data
-  filter(primary_type == "THEFT",
-         y_month != '2020-06') %>%
-  group_by(y_month) %>%
-  summarise(monthly_freq = n())
-
-# change colname name for time series
-colnames(theft)[1] <- "time"
-colnames(theft_monthly)[1] <- "time"
-
-# convert to xts time series
-theft_xts <- ts_xts(na.omit(theft))
-theft_monthly_xts <- ts_xts(theft_monthly)
-
-theft_diff_xts <- na.omit(diff(theft_xts))
-theft_diff_xts <- theft_diff_xts[paste(start(CH_res_ts),end(theft_diff_xts), sep = "/")]
-
-# auto arima model
-theft_ar_auto <- forecast::auto.arima(as.ts(theft_diff_xts))
-theft_ar_auto
-```
-
-```{r THEFT}
-# auto arima model
-
-theft_ar_auto %>% 
-  forecast() %>%
-  {cbind(actuals=.$x, forecast_mean=.$mean,
-         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
-         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Daily forcast for theft in Chicago', ylab = 'Daily (expected) cases') %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
-  dySeries(c("lower_80", "forecast_mean", "upper_80"),
-           label = "80%", color = "blue") %>%
-  dySeries(c("lower_95", "forecast_mean", "upper_95"),
-           label = "95%", color = "blue")%>%
-  dyLegend(labelsSeparateLines=TRUE) %>%
-  dyRangeSelector()
-
-```
-
-
 
 Row {data-height=300} 
 -----------------------------------------------------------------------
@@ -525,22 +494,6 @@ Row {data-height=300}
 # p <- ggplot(data = cbind(df, pred = predict(fm)), aes(x = x, y = y, color = A))
 # p <- p + geom_point() + geom_line(aes(y = pred))
 # ggplotly(p)
-
-ts_CH <- covid19_CH %>%
-  dplyr::select(date, confirmed) %>%
-  ts_xts()
-
-ts_diff_CH <- na.omit(diff(ts_CH))
-
-dygraph(ts_diff_CH)%>%  
-  dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red")%>%
-  dySeries("cd7b965f", label = "Chicago")%>%
-  dyLegend(show = "always", hideOnMouseOut = FALSE)
-
-
-covid19_CH_diff <- data.frame(diff(covid19_CH$confirmed))
-colnames(covid19_CH_diff)[1] = "confirmed"
-covid19_CH_diff$date = covid19_CH$date[2:length(covid19_CH$date)]
 ```
 
 
