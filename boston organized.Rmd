@@ -24,7 +24,7 @@ This document is to study the possible relationship between COVID-19 and frequen
 ```{r covid 19 for MA}
 # extract MA data from US data. level 3 is by cities but cannot find Boston.
 covid19_MA <- covid19("USA", level = 2) %>%
-  filter(state == "Massachusetts") %>%
+  filter(administrative_area_level_2 == "Massachusetts") %>%
   # filter out days when confirmed is zero or one
   # becasue when it was 1 for a very long time
   filter(confirmed > 1)
@@ -81,7 +81,7 @@ covid19_MA_diff$timeInt = as.numeric(covid19_MA_diff$date)
 covid19_MA_diff$timeIid = covid19_MA_diff$timeInt
 
 # GAMM model
-gamMA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 70), 
+gamMA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 85), 
                       random = ~(1|timeIid),
                       data = covid19_MA_diff,
                       family = poisson(link = 'log'))
@@ -146,8 +146,10 @@ The residuals obtained here represents the fluctuation of daily confirmed cases 
 # Boston Crime
 ## Load crime data
 ```{r load crime data}
-boston <- read.csv("https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmp6p2g5goi.csv")
+boston <- read.csv("https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmpqy9o_jgd.csv")
 head(boston)
+
+
 
 # add date
 boston <- boston %>%
@@ -158,6 +160,9 @@ boston <- boston %>%
 
 ## Overview of crime situation
 ```{r summary}
+boston$YEAR = as.character(boston$YEAR)
+boston$MONTH = substr(boston$date, start = 6, stop = 7)
+
 # summary of all crime
 boston_summary <- boston %>%
   group_by(OFFENSE_DESCRIPTION) %>%
@@ -167,73 +172,54 @@ boston_summary <- boston %>%
 # bar chart of 5 most frequent crime over the years
 boston %>%
   filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
-  ggplot(aes(x=OFFENSE_DESCRIPTION)) +
-  geom_bar()
-
-# top 5 crime over time
-# monthly
-# exclude May due to incomplete info
-boston %>%
-  dplyr::select(y_month, OFFENSE_DESCRIPTION) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], y_month != "2020-05") %>% 
-  count(y_month, OFFENSE_DESCRIPTION) %>%
-  ggplot(aes(y_month, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
-  geom_area(size = 0.01, alpha = 0.5) + 
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
-  ggtitle("Frequency of top 5 crime in Boston since 2015")
-
-# top 5 crime in 2020
-# area chart
-boston %>%
-  dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020) %>% 
-  count(date, OFFENSE_DESCRIPTION) %>%
-  ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
-  geom_area(size = 0.01, alpha = 0.4) +
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
-  ggtitle("Frequency of top 5 crime in Boston in 2020")
-
-# line
-# per day
-boston %>%
-  dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020) %>% 
-  count(date, OFFENSE_DESCRIPTION) %>%
-  ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
-  geom_line() +
-  scale_color_brewer(palette = "Set1") +
-  ggtitle("Frequency of top 5 crime in Boston in 2020")
-
+  ggplot(aes(x=OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
+  coord_flip() +
+  geom_bar(width = 0.5) +
+  labs(y="Number of crimes", x = "offense description")
 
 # per month
-# exclude May
+# exclude June 2020 due to incomplete data
 boston %>%
-  dplyr::select(MONTH, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020, MONTH != 5) %>% 
+  dplyr::select(MONTH, OFFENSE_DESCRIPTION, YEAR, y_month) %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),
+         YEAR == 2020,
+         y_month != "2020-06") %>% 
   count(MONTH, OFFENSE_DESCRIPTION) %>%
-  ggplot(aes(MONTH, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
+  na.omit() %>%
+  ggplot(aes(MONTH, n, group = OFFENSE_DESCRIPTION,
+             color = OFFENSE_DESCRIPTION)) +
   geom_line() +
   scale_color_brewer(palette = "Set1") +
   ggtitle("Monthly frequency of top 5 crime in Boston in 2020")
 
-
-# day of the week
+# daily
+# 2020 only
 boston %>%
+  dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
   filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
-  ggplot(aes(x = DAY_OF_WEEK, fill = DAY_OF_WEEK)) +
-  geom_bar(width = 0.5) +
-  facet_wrap(~ OFFENSE_DESCRIPTION)
-
-# year to year comparison
-boston %>%
-  dplyr::select(y_month, MONTH, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5]) %>%
-  count(YEAR, MONTH, OFFENSE_DESCRIPTION) %>%
+  count(date, OFFENSE_DESCRIPTION) %>%
   na.omit() %>%
-  ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
+  ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
   geom_line() +
   facet_wrap(~OFFENSE_DESCRIPTION) +
-  ggtitle("year to year comparison of the top 5 crime in boston in the past 5 years")
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  ggtitle("Frequency of top 5 crime in Boston in 2020 (Jan to June)")
+
+# bunch of crime seem to be affected by BLM protests
+
+# year to year comparison
+# exclude 2020-06 due to incomplete info
+boston %>%
+  dplyr::select(MONTH, y_month, OFFENSE_DESCRIPTION, YEAR) %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),
+         y_month != "2020-06") %>%
+  count(YEAR, MONTH, OFFENSE_DESCRIPTION) %>%
+  na.omit() %>%
+  ggplot(aes(x=MONTH, y=n, group = YEAR, color = YEAR)) +
+  geom_line() +
+  facet_wrap(~OFFENSE_DESCRIPTION) +
+  ggtitle("year to year comparison of the top 5 crime in Boston in the past 5 years")
+  
 ```
 
 Many plots in different style about the top 5 most frequent crime in Boston.
@@ -275,7 +261,7 @@ top5crime_diff <- na.omit(diff(top5crime_xts))
 # specify common time range
 # start from when covid was a thing
 # end with crime since it is manually updated
-common_time <- seq.Date(start(MA_res_ts), end(top5crime_diff), by = "day")
+common_time <- seq.Date(start(MA_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
@@ -328,7 +314,7 @@ VAR_dispute <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=optimal_dispute$selection[
 causality(VAR_investigate, cause = colnames(combined_diff)[1])
 causality(VAR_investigate, cause = "residuals")
 ```
-covid NOT significant to investigate person
+Nothing significant
 
 #### Property damange
 ```{r granger property}
@@ -336,7 +322,7 @@ covid NOT significant to investigate person
 causality(VAR_damage, cause = colnames(combined_diff)[2])
 causality(VAR_damage, cause = "residuals")
 ```
-property damage significant to covid, somehow
+Nothing significant
 
 #### Medical attention
 ```{r granger medical}
@@ -344,7 +330,7 @@ property damage significant to covid, somehow
 causality(VAR_medical, cause = colnames(combined_diff)[3])
 causality(VAR_medical, cause = "residuals")
 ```
-no relationship with medical attention, strangely
+Medical attention weakly significant both ways.
 
 #### Vandalism
 ```{r granger vandalism}
@@ -352,7 +338,7 @@ no relationship with medical attention, strangely
 causality(VAR_vandalism, cause = colnames(combined_diff)[4])
 causality(VAR_vandalism, cause = "residuals")
 ```
-no causality. almost weak instantneous causality
+Vandalism significant to covid.
 
 #### Verbal dispute
 ```{r granger dispute}
@@ -362,47 +348,89 @@ causality(VAR_dispute, cause = "residuals")
 
 ```
 
-covid significant to verbal dispute. verbal dispute significant to covid.
+covid significant to verbal dispute.
 
 ### Step 7: Impulse Response Function
 
-Only properety damange and verbal dispute have granger causality.
+Only vandalism (from crime), and verbal dispute (from covid) are selected.
 
 ```{r irf}
+lags = c(1:25)
+
 par(mfrow = c(1,2))
-# investigate person
-irf_damage_1 <- irf(VAR_damage, 
-                         impulse = "property.damage", 
-                         response = "residuals", 
-                         n.ahead = 24)
-irf_damage_2 <- irf(VAR_damage, 
-                         impulse = "residuals", 
-                         response = "property.damage", 
-                         n.ahead = 24)
-plot(irf_damage_1)
-plot(irf_damage_2)
+# vandalism
+# from crime
+irf_vandalism_1 <- irf(VAR_vandalism,
+                     impulse = "vandalism",
+                     response = "residuals",
+                     n.ahead = 24)
+plot(irf_vandalism_1)
+
+# ggplot version
+irf_vandalism_1_gg <- data.frame(irf_vandalism_1$irf$vandalism[,1],
+                                 irf_vandalism_1$Lower$vandalism[,1],
+                                 irf_vandalism_1$Upper$vandalism[,1])
+
+colnames(irf_vandalism_1_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_vandalism_1_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more daily covid19 cases there will be 
+          after 1 vandalism") +
+  xlab("Number of days after a vandalism")+
+  ylab("Number of new covid 19 cases")
+
 
 # verbal dispute
-irf_dispute_1 <- irf(VAR_dispute, 
-                         impulse = "dispute", 
-                         response = "residuals", 
-                         n.ahead = 24)
+# from covid
 irf_dispute_2 <- irf(VAR_dispute, 
                          impulse = "residuals", 
                          response = "dispute", 
                          n.ahead = 24)
-plot(irf_dispute_1)
 plot(irf_dispute_2)
+
+# ggplot version
+irf_dispute_2_gg <- data.frame(irf_dispute_2$irf$residuals[,1],
+                               irf_dispute_2$Lower$residuals[,1],
+                               irf_dispute_2$Upper$residuals[,1])
+
+colnames(irf_dispute_2_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_dispute_2_gg, aes(x=lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  ggtitle("How many more verbal dispute cases per day there will be 
+          after 1 confirmed covid19 case") +
+  xlab("Number of days after a confimed covid 19 case")+
+  ylab("Number of verbal dispute cases")
 ```
 
 ### Step 8: Forecast
 ```{r var forecast}
-forecast(VAR_investigate) %>%
-  autoplot()
+# vandalism to covid
+forecast_vandalism <- forecast(VAR_vandalism)
 
-forecast(VAR_dispute) %>%
-  autoplot()
+autoplot(forecast_vandalism$forecast$residuals) +
+  ggtitle("Prediction on how many more covid19 cases
+          with the help of vandalism record") +
+  theme_classic() +
+  ylab("Daily additional confirmed number") +
+  xlab(paste("Number of days since", common_time[1]))
 
+# covid to verbal dispute
+forecast_dispute <- forecast(VAR_dispute)
+
+autoplot(forecast_dispute$forecast$dispute) +
+  ggtitle("Prediction on how many more verbal dispute cases compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Number of days since", common_time[1]))
+
+#### OPTIONAL
 accu_compare <- data.frame(rbind(accuracy(VAR_dispute$varresult[[1]]),
                                  accuracy(VAR_investigate$varresult[[1]]),
                                  accuracy(VAR_vandalism$varresult[[1]])))
