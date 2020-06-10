@@ -146,8 +146,10 @@ The residuals obtained here represents the fluctuation of daily confirmed cases 
 # Boston Crime
 ## Load crime data
 ```{r load crime data}
-boston <- read.csv("https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmp6p2g5goi.csv")
+boston <- read.csv("https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmpqy9o_jgd.csv")
 head(boston)
+
+
 
 # add date
 boston <- boston %>%
@@ -259,7 +261,7 @@ top5crime_diff <- na.omit(diff(top5crime_xts))
 # specify common time range
 # start from when covid was a thing
 # end with crime since it is manually updated
-common_time <- seq.Date(start(MA_res_ts), end(top5crime_diff), by = "day")
+common_time <- seq.Date(start(MA_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
@@ -312,7 +314,7 @@ VAR_dispute <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=optimal_dispute$selection[
 causality(VAR_investigate, cause = colnames(combined_diff)[1])
 causality(VAR_investigate, cause = "residuals")
 ```
-covid NOT significant to investigate person
+Nothing significant
 
 #### Property damange
 ```{r granger property}
@@ -320,7 +322,7 @@ covid NOT significant to investigate person
 causality(VAR_damage, cause = colnames(combined_diff)[2])
 causality(VAR_damage, cause = "residuals")
 ```
-property damage significant to covid, somehow
+Nothing significant
 
 #### Medical attention
 ```{r granger medical}
@@ -328,7 +330,7 @@ property damage significant to covid, somehow
 causality(VAR_medical, cause = colnames(combined_diff)[3])
 causality(VAR_medical, cause = "residuals")
 ```
-no relationship with medical attention, strangely
+Medical attention weakly significant both ways.
 
 #### Vandalism
 ```{r granger vandalism}
@@ -336,7 +338,7 @@ no relationship with medical attention, strangely
 causality(VAR_vandalism, cause = colnames(combined_diff)[4])
 causality(VAR_vandalism, cause = "residuals")
 ```
-no causality. almost weak instantneous causality
+Vandalism significant to covid.
 
 #### Verbal dispute
 ```{r granger dispute}
@@ -346,37 +348,65 @@ causality(VAR_dispute, cause = "residuals")
 
 ```
 
-covid significant to verbal dispute. verbal dispute significant to covid.
+covid significant to verbal dispute.
 
 ### Step 7: Impulse Response Function
 
-Only properety damange and verbal dispute have granger causality.
+Only vandalism (from crime), and verbal dispute (from covid) are selected.
 
 ```{r irf}
+lags = c(1:25)
+
 par(mfrow = c(1,2))
-# investigate person
-irf_damage_1 <- irf(VAR_damage, 
-                         impulse = "property.damage", 
-                         response = "residuals", 
-                         n.ahead = 24)
-irf_damage_2 <- irf(VAR_damage, 
-                         impulse = "residuals", 
-                         response = "property.damage", 
-                         n.ahead = 24)
-plot(irf_damage_1)
-plot(irf_damage_2)
+# vandalism
+# from crime
+irf_vandalism_1 <- irf(VAR_vandalism,
+                     impulse = "vandalism",
+                     response = "residuals",
+                     n.ahead = 24)
+plot(irf_vandalism_1)
+
+# ggplot version
+irf_vandalism_1_gg <- data.frame(irf_vandalism_1$irf$vandalism[,1],
+                                 irf_vandalism_1$Lower$vandalism[,1],
+                                 irf_vandalism_1$Upper$vandalism[,1])
+
+colnames(irf_vandalism_1_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_vandalism_1_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more daily covid19 cases there will be 
+          after 1 vandalism") +
+  xlab("Number of days after a vandalism")+
+  ylab("Number of new covid 19 cases")
+
 
 # verbal dispute
-irf_dispute_1 <- irf(VAR_dispute, 
-                         impulse = "dispute", 
-                         response = "residuals", 
-                         n.ahead = 24)
+# from covid
 irf_dispute_2 <- irf(VAR_dispute, 
                          impulse = "residuals", 
                          response = "dispute", 
                          n.ahead = 24)
-plot(irf_dispute_1)
 plot(irf_dispute_2)
+
+# ggplot version
+irf_dispute_2_gg <- data.frame(irf_dispute_2$irf$residuals[,1],
+                               irf_dispute_2$Lower$residuals[,1],
+                               irf_dispute_2$Upper$residuals[,1])
+
+colnames(irf_dispute_2_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_dispute_2_gg, aes(x=lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  ggtitle("How many more verbal dispute cases per day there will be 
+          after 1 confirmed covid19 case") +
+  xlab("Number of days after a confimed covid 19 case")+
+  ylab("Number of verbal dispute cases")
 ```
 
 ### Step 8: Forecast
