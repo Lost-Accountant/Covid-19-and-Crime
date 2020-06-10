@@ -244,7 +244,7 @@ top5crime_diff <- na.omit(diff(top5crime_xts))
 # specify common time range
 # start from when covid was a thing
 # end with 1 day before today's date
-common_time <- seq.Date(start(RI_res_ts), Sys.Date() - 1 , by = "day")
+common_time <- seq.Date(start(RI_res_ts), as.Date("2020-05-25") , by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
