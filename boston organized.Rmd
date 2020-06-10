@@ -24,7 +24,7 @@ This document is to study the possible relationship between COVID-19 and frequen
 ```{r covid 19 for MA}
 # extract MA data from US data. level 3 is by cities but cannot find Boston.
 covid19_MA <- covid19("USA", level = 2) %>%
-  filter(state == "Massachusetts") %>%
+  filter(administrative_area_level_2 == "Massachusetts") %>%
   # filter out days when confirmed is zero or one
   # becasue when it was 1 for a very long time
   filter(confirmed > 1)
@@ -81,7 +81,7 @@ covid19_MA_diff$timeInt = as.numeric(covid19_MA_diff$date)
 covid19_MA_diff$timeIid = covid19_MA_diff$timeInt
 
 # GAMM model
-gamMA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 70), 
+gamMA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 85), 
                       random = ~(1|timeIid),
                       data = covid19_MA_diff,
                       family = poisson(link = 'log'))
@@ -158,6 +158,9 @@ boston <- boston %>%
 
 ## Overview of crime situation
 ```{r summary}
+boston$YEAR = as.character(boston$YEAR)
+boston$MONTH = substr(boston$date, start = 6, stop = 7)
+
 # summary of all crime
 boston_summary <- boston %>%
   group_by(OFFENSE_DESCRIPTION) %>%
@@ -167,73 +170,54 @@ boston_summary <- boston %>%
 # bar chart of 5 most frequent crime over the years
 boston %>%
   filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
-  ggplot(aes(x=OFFENSE_DESCRIPTION)) +
-  geom_bar()
-
-# top 5 crime over time
-# monthly
-# exclude May due to incomplete info
-boston %>%
-  dplyr::select(y_month, OFFENSE_DESCRIPTION) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], y_month != "2020-05") %>% 
-  count(y_month, OFFENSE_DESCRIPTION) %>%
-  ggplot(aes(y_month, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
-  geom_area(size = 0.01, alpha = 0.5) + 
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
-  ggtitle("Frequency of top 5 crime in Boston since 2015")
-
-# top 5 crime in 2020
-# area chart
-boston %>%
-  dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020) %>% 
-  count(date, OFFENSE_DESCRIPTION) %>%
-  ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
-  geom_area(size = 0.01, alpha = 0.4) +
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
-  ggtitle("Frequency of top 5 crime in Boston in 2020")
-
-# line
-# per day
-boston %>%
-  dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020) %>% 
-  count(date, OFFENSE_DESCRIPTION) %>%
-  ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
-  geom_line() +
-  scale_color_brewer(palette = "Set1") +
-  ggtitle("Frequency of top 5 crime in Boston in 2020")
-
+  ggplot(aes(x=OFFENSE_DESCRIPTION, fill = OFFENSE_DESCRIPTION)) +
+  coord_flip() +
+  geom_bar(width = 0.5) +
+  labs(y="Number of crimes", x = "offense description")
 
 # per month
-# exclude May
+# exclude June 2020 due to incomplete data
 boston %>%
-  dplyr::select(MONTH, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5], YEAR == 2020, MONTH != 5) %>% 
+  dplyr::select(MONTH, OFFENSE_DESCRIPTION, YEAR, y_month) %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),
+         YEAR == 2020,
+         y_month != "2020-06") %>% 
   count(MONTH, OFFENSE_DESCRIPTION) %>%
-  ggplot(aes(MONTH, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
+  na.omit() %>%
+  ggplot(aes(MONTH, n, group = OFFENSE_DESCRIPTION,
+             color = OFFENSE_DESCRIPTION)) +
   geom_line() +
   scale_color_brewer(palette = "Set1") +
   ggtitle("Monthly frequency of top 5 crime in Boston in 2020")
 
-
-# day of the week
+# daily
+# 2020 only
 boston %>%
+  dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
   filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
-  ggplot(aes(x = DAY_OF_WEEK, fill = DAY_OF_WEEK)) +
-  geom_bar(width = 0.5) +
-  facet_wrap(~ OFFENSE_DESCRIPTION)
-
-# year to year comparison
-boston %>%
-  dplyr::select(y_month, MONTH, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% boston_summary$OFFENSE_DESCRIPTION[1:5]) %>%
-  count(YEAR, MONTH, OFFENSE_DESCRIPTION) %>%
+  count(date, OFFENSE_DESCRIPTION) %>%
   na.omit() %>%
-  ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
+  ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
   geom_line() +
   facet_wrap(~OFFENSE_DESCRIPTION) +
-  ggtitle("year to year comparison of the top 5 crime in boston in the past 5 years")
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
+  ggtitle("Frequency of top 5 crime in Boston in 2020 (Jan to June)")
+
+# bunch of crime seem to be affected by BLM protests
+
+# year to year comparison
+# exclude 2020-06 due to incomplete info
+boston %>%
+  dplyr::select(MONTH, y_month, OFFENSE_DESCRIPTION, YEAR) %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),
+         y_month != "2020-06") %>%
+  count(YEAR, MONTH, OFFENSE_DESCRIPTION) %>%
+  na.omit() %>%
+  ggplot(aes(x=MONTH, y=n, group = YEAR, color = YEAR)) +
+  geom_line() +
+  facet_wrap(~OFFENSE_DESCRIPTION) +
+  ggtitle("year to year comparison of the top 5 crime in Boston in the past 5 years")
+  
 ```
 
 Many plots in different style about the top 5 most frequent crime in Boston.
