@@ -238,7 +238,7 @@ VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_theft$selec
 ```{r, warning=F, message=F}
 vehicle <- chicago %>%
   filter(primary_type == 'MOTOR VEHICLE THEFT')%>%
-  group_by(date, primary_type) %>%
+  group_by(Date, primary_type) %>%
   tally() %>%
   spread(primary_type, n)
 
@@ -360,86 +360,141 @@ ggplotly(plt)
 ```   
  
 ### VAR forecast for criminal damage
+```{r}
+interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
+  value = g.getValue(row, col);
+  if(value[0] != value[2]) {
+    lower = Dygraph.numberValueFormatter(value[0], opts);
+    upper = Dygraph.numberValueFormatter(value[2], opts);
+    return '[' + lower + ', ' + upper + ']';
+  } else {
+    return Dygraph.numberValueFormatter(num, opts);
+  }
+}"
+```
 
 ```{r}
-# criminal damange and vehicle theft
-forecast_criminal <- forecast(VAR_criminal)
-forecast_vehicle <- forecast(VAR_vehicle)
-forecast_assault <- forecast(VAR_assault)
-forecast_battery <- forecast(VAR_battery)
-forecast_deceptive <- forecast(VAR_deceptive)
-forecast_theft <- forecast(VAR_theft)
-
-# only impulse from covid are significant
-# only forecast on crime are being helped
-varf1 <- autoplot(forecast_criminal$forecast$criminal) +
-  ggtitle("Prediction on how many more criminal damage cases
-          compared to yesterday") +
-  theme_classic() +
-  ylab("Day-to-day change") +
-  xlab(paste("Numebr of days since", common_time[1]))
-
-ggplotly(varf1)
+f_criminal <- forecast(VAR_criminal)
+f_criminal$forecast$criminal %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily VAR forcast for assault in Chicago', 
+          ylab = 'Daily (expected) cases') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
 ### VAR forecast for vehicle theft
 ```{r}
-varf2 <- autoplot(forecast_vehicle$forecast$vehicle) +
-  ggtitle("Prediction on how many more vehicle theft cases
-          compared to yesterday") +
-  theme_classic() +
-  ylab("Day-to-day change") +
-  xlab(paste("Numebr of days since", common_time[1]))
-
-ggplotly(varf2)
+f_vehicle <- forecast(VAR_vehicle)
+f_vehicle$forecast$vehicle %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily VAR forcast for assault in Chicago', 
+          ylab = 'Daily (expected) cases') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
 ### VAR forecast for assault
 ```{r}
-varf3 <- autoplot(forecast_assault$forecast$assault) +
-  ggtitle("Prediction on how many more assault cases
-          compared to yesterday") +
-  theme_classic() +
-  ylab("Day-to-day change") +
-  xlab(paste("Numebr of days since", common_time[1]))
-
-ggplotly(varf3)
+f_assault <- forecast(VAR_assault)
+f_assault$forecast$assault %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily VAR forcast for assault in Chicago', 
+          ylab = 'Daily (expected) cases') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
 ### VAR forecast for battery
 ```{r}
-varf4 <- autoplot(forecast_battery$forecast$battery) +
-  ggtitle("Prediction on how many more battery cases
-          compared to yesterday") +
-  theme_classic() +
-  ylab("Day-to-day change") +
-  xlab(paste("Numebr of days since", common_time[1]))
-
-ggplotly(varf4)
+f_battery <- forecast(VAR_battery)
+f_battery$forecast$battery %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily VAR forcast for battery in Chicago', 
+          ylab = 'Daily (expected) cases') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
 ### VAR forecast for deceptive
 ```{r}
-varf5 <- autoplot(forecast_deceptive$forecast$deceptive) +
-  ggtitle("Prediction on how many more deceptive practice cases
-          compared to yesterday") +
-  theme_classic() +
-  ylab("Day-to-day change") +
-  xlab(paste("Numebr of days since", common_time[1]))
-
-ggplotly(varf5)
+f_deceptive <- forecast(VAR_deceptive)
+f_deceptive$forecast$deceptive %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily VAR forcast for deceptive practice in Chicago', 
+          ylab = 'Daily (expected) cases') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
 ### VAR forecast for theft
 ```{r}
-varf6 <- autoplot(forecast_theft$forecast$theft) +
-  ggtitle("Prediction on how many more theft cases
-          compared to yesterday") +
-  theme_classic() +
-  ylab("Day-to-day change") +
-  xlab(paste("Numebr of days since", common_time[1]))
-
-ggplotly(varf6)
+f_theft <- forecast(VAR_theft)
+f_theft$forecast$theft %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Daily VAR forcast for theft in Chicago', ylab = 'Daily (expected) cases') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
 Row {data-height=300} 
