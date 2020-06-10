@@ -111,6 +111,7 @@ chicago %>%
 # This dataset doesn't have 'day of the week' yet.
 
 # daily
+# 2020 only
 chicago %>%
   dplyr::select(Date, primary_type, year) %>%
   filter(primary_type %in% chicago_summary$primary_type[1:5], year == 2020) %>%
@@ -167,7 +168,7 @@ top5crime_diff <- na.omit(diff(top5crime_xts))
 ```
 
 ### Step 2: Construct combined time series
-## COVID 19 RELATED
+#### COVID 19 RELATED
 
 ```{r covid 19 related exploration}
 # extract for tranforming into time series data
@@ -237,8 +238,8 @@ adf.test(as.ts(CH_res_ts))
 ```{r top 5 crime VAR}
 # specify common time range
 # start from when covid was a thing
-# end with crime since it is manually updated
-common_time <- seq.Date(start(CH_res_ts), end(top5crime_diff), by = "day")
+# end on May 25, to avoid effect of protests related to George Floyid.
+common_time <- seq.Date(start(CH_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
@@ -275,42 +276,47 @@ optimal_theft <- VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.m
 
 VAR_assault <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=optimal_assault$selection[1])
 VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=optimal_battery$selection[1])
-VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]),
-                    p=optimal_criminal$selection[1])
-VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
-                     p=optimal_deceptive$selection[1])
+VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]), p=optimal_criminal$selection[1])
+VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]), p=optimal_deceptive$selection[1])
 VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_theft$selection[1])
-
-summary(VAR_assault)
 ```
 
 ### Step 6: Granger Causality test
-
+#### ASSAULT
 ```{r}
 causality(VAR_assault, cause = colnames(combined_diff)[1])
 causality(VAR_assault, cause = "residuals")
 ```
+Weakly instantneous causality.
 
+#### BATTERY ASSAULT
 ```{r}
 causality(VAR_battery, cause = colnames(combined_diff)[2])
 causality(VAR_battery, cause = "residuals")
 ```
+covid weakly significant to battery assault.
+
+#### CRIMINAL DAMAGE
 ```{r}
 causality(VAR_criminal, cause = colnames(combined_diff)[3])
 causality(VAR_criminal, cause = "residuals")
 ```
-Very significant causality on criminal damage (p-value = 0.01221)
+Very significant causality to criminal damage (p-value = 0.01221)
 
+#### DECEPTIVE PRACTICE
 ```{r}
 causality(VAR_deceptive, cause = colnames(combined_diff)[4])
 causality(VAR_deceptive, cause = "residuals")
 ```
+Nothing significant
 
+#### THEFT
 ```{r}
 causality(VAR_theft, cause = colnames(combined_diff)[5])
 causality(VAR_theft, cause = "residuals")
 ```
-COVID-19 may help to predict theft. (p-value = 0.05294)
+COVID-19 may help to predict theft. (p-value = 0.06).
+
 
 ```{r}
 vehicle <- chicago %>%
@@ -337,7 +343,7 @@ VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff2)[,c(1,2)]), p=optimal_vehicle$
 causality(VAR_vehicle, cause = colnames(combined_diff2)[1])
 causality(VAR_vehicle, cause = "residuals")
 ```
-covid-19 is significant to vehicle theft (p-value = 0.005237)
+covid-19 is significant to vehicle theft (p-value = 0.018)
 
 ### Step 7: Impulse Response Function
 
@@ -372,6 +378,7 @@ irf_theft_2 <- irf(VAR_theft,
 plot(irf_theft_1)
 plot(irf_theft_2)
 
+### CONCLUDE TO NOT USE CUMULATIVE
 # Calculate impulse response
 ir.criminal1 <- irf(VAR_criminal,impulse = "criminal", 
                          response = "residuals", 

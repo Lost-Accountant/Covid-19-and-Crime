@@ -20,7 +20,7 @@ library(vars) #VAR and Causality
 ```{r covid 19 for RI}
 # extract RI data from US data. level 3 is by cities but cannot find Boston.
 covid19_RI <- covid19("USA", level = 2) %>%
-  filter(state == "Rhode Island") %>%
+  filter(administrative_area_level_2 == "Rhode Island") %>%
   # filter out days when confirmed is zero or one
   # becasue when it was 1 for a very long time
   filter(confirmed > 1)
