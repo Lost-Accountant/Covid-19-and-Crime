@@ -3,6 +3,7 @@ title: "Seattle"
 output: pdf_document
 ---
 ```{r library, message = FALSE, warning = FALSE}
+library(RSocrata)
 library(tidyverse)
 library(tseries)
 library(tsbox) # transform data into time series
@@ -21,8 +22,8 @@ covid19_SEA <- covid19("USA", level = 3) %>%
   filter(administrative_area_level_3 == "King",
          administrative_area_level_2 == "Washington" ) %>%
   # filter out days when confirmed is zero or one
-  # becasue when it was 2 for a very long time
-  filter(confirmed > 2)
+  # becasue when it was 1 for a very long time
+  filter(confirmed > 1)
 
 # brief display
 head(covid19_SEA)
@@ -42,7 +43,7 @@ plot.xts(ts_SEA,
 
 # plot daily cases
 # first difference
-adj_diff_GA <- na.omit(ts_diff_GA[,1] + 7)
+ts_diff_SEA <- na.omit(diff(ts_SEA))
 
 plot.xts(ts_diff_SEA,
          main = "Daily confirmed cases of
@@ -55,7 +56,10 @@ plot.xts(ts_diff_SEA,
 # construct GAMM model from prof. Brown's work
 
 # construct data frame of difference, not time series
-covid19_SEA_diff <- data.frame(diff(covid19_SEA$confirmed) + 7)
+# one day has -7 daily confirmed cases
+# add back 7 to all
+# does not affect residuals after GAMM
+covid19_SEA_diff <- data.frame(diff(covid19_SEA$confirmed) - min(ts_diff_SEA))
   
 colnames(covid19_SEA_diff)[1] = "confirmed"
 covid19_SEA_diff$date = covid19_SEA$date[2:length(covid19_SEA$date)]
@@ -66,24 +70,44 @@ covid19_SEA_diff$timeInt = as.numeric(covid19_SEA_diff$date)
 covid19_SEA_diff$timeIid = covid19_SEA_diff$timeInt
 
 # GAMM model
-gamSEA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 70), 
+gamSEA <- gamm4::gamm4(confirmed ~ s(timeInt, k = 90), 
                       random = ~(1|timeIid),
                       data = covid19_SEA_diff,
                       family = poisson(link = 'log'))
-# currently 70 is the max due to length of data
 ```
 
 #### Obtain the residuals
-```{r covid 19 residual}
+```{r covid 19 plot GAMM}
+# plot fitted value
+toPredict = data.frame(time = seq(covid19_SEA_diff$date[1],
+                                  covid19_SEA_diff$date[length(covid19_SEA_diff$date)],
+                                  by = '1 day'))
+
+toPredict$timeInt = as.numeric(toPredict$time)
+
+matplot(toPredict$time, 
+        exp(do.call(cbind, mgcv::predict.gam(gamSEA$gam, toPredict, se.fit=TRUE)) %*% 
+              Pmisc::ciMat()), 
+        col='red', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='Daliy Confirmed cases', 
+        ylim = c(0.5, 500), xlim = as.Date(c(covid19_SEA$date[1], covid19_SEA$date[length(covid19_SEA$date)])))
+title("Daily confirmed cases of COVID 19 in Seattle")
+matpoints(toPredict$time, covid19_SEA_diff$confirmed, 
+          col = 'black',
+          type = 'l')
+
+```
+
+
+```{r covid 19 residuals}
 # obtain forecast
 forecast_covid <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamSEA$gam, toPredict, se.fit=TRUE))))
                         
                         
 # access residuals
-SEA_res <- data.frame(covid19_GA_diff$confirmed - forecast_covid$fit)
+SEA_res <- data.frame(covid19_SEA_diff$confirmed - forecast_covid$fit)
 
 # transform into time series
-SEA_res$time = covid19_GA_diff$date
+SEA_res$time = covid19_SEA_diff$date
 colnames(SEA_res)[1] = "residuals"
 
 col_order <- c("time", "residuals")
@@ -104,31 +128,18 @@ adf.test(as.ts(SEA_res_ts))
 seattle <- read.socrata(
   'https://data.seattle.gov/api/views/tazs-3rd5/rows.csv?accessType=DOWNLOAD',
   app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+
 seattle <- seattle %>%
-  filter(substr(offense_end_datetime, start = 1, stop = 4) >= '2014')
+  filter(substr(report_datetime, start = 1, stop = 4) >= '2014')
 
 head(seattle)
 
-# many obvious data entry error
-seattle$offense_end_datetime[20717] <- '2019-05-28 03:30:00'
-seattle$offense_end_datetime[232496] <- '2020-05-08 15:45:00'
-seattle$offense_end_datetime[175382] <- '2019-07-22 21:46:00'
-seattle$offense_end_datetime[221967] <- '2019-12-28 10:00:00'
-seattle$offense_end_datetime[171148] <- '2019-12-23 23:59:00'
-seattle$offense_end_datetime[213047] <- '2019-11-29 12:00:00'
-seattle$offense_end_datetime[1844] <- '2020-01-13 12:00:00'
-seattle$offense_end_datetime[168549] <- '2019-08-14 12:40:00'
-seattle$offense_end_datetime[168604] <- '2019-07-31 00:00:00'
-seattle$offense_end_datetime[168618] <- '2019-07-28 19:59:00'
-seattle$offense_end_datetime[206835] <- '2019-06-07 12:18:00'
-seattle$offense_end_datetime[206835] <- '2019-06-07 12:18:00'
-
 # add date
 seattle <- seattle %>%
-  mutate(y_month  = substr(offense_end_datetime, start = 1, stop = 7)) %>%
-  mutate(YEAR  = substr(offense_end_datetime, start = 1, stop = 4)) %>%
-  mutate(MONTH = substr(offense_end_datetime, start = 6, stop = 7)) %>%
-  mutate(Date = substr(offense_end_datetime, start = 1, stop = 10))
+  mutate(y_month  = substr(report_datetime, start = 1, stop = 7)) %>%
+  mutate(YEAR  = substr(report_datetime, start = 1, stop = 4)) %>%
+  mutate(MONTH = substr(report_datetime, start = 6, stop = 7)) %>%
+  mutate(Date = substr(report_datetime, start = 1, stop = 10))
 ```
 
 ```{r}
@@ -147,11 +158,11 @@ seattle %>%
   theme_classic() +
   labs(y='Number of Crimes',x='Offense Description')
 
-# per MONTH
-# exclude May
+# per MONTH in 2020
+# exclude June
 seattle %>%
   dplyr::select(MONTH, offense, YEAR) %>%
-  filter(offense %in% seattle_summary$offense[1:5], YEAR == '2020') %>% 
+  filter(offense %in% seattle_summary$offense[1:5], YEAR == '2020', MONTH != "06") %>% 
   count(MONTH, offense) %>%
   ggplot(aes(MONTH, n, group = offense, color = offense)) +
   geom_line() +
@@ -162,19 +173,21 @@ seattle %>%
 
 # daily
 seattle %>%
-  dplyr::select(offense_end_datetime, offense, YEAR) %>%
+  dplyr::select(Date, offense, YEAR) %>%
   filter(offense %in% seattle_summary$offense[1:5], YEAR=='2020') %>%
-  count(offense_end_datetime, offense) %>%
-  ggplot(aes(offense_end_datetime, n, group = offense, color = offense)) +
+  count(Date, offense) %>%
+  ggplot(aes(Date, n, group = offense, color = offense)) +
   geom_line() +
   facet_wrap(~offense) +
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(seattle_summary$offense[1:5]))) +
   ggtitle("Frequency of top 5 crime in Seattle in 2020")
 
 # year to year comparison
+# exclude 2020-06
 seattle %>%
   dplyr::select(y_month, MONTH, offense, YEAR) %>%
-  filter(offense %in% seattle_summary$offense[1:5]) %>%
+  filter(offense %in% seattle_summary$offense[1:5],
+         y_month != "2020-06") %>%
   count(YEAR, MONTH, offense) %>%
   na.omit() %>%
   ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
