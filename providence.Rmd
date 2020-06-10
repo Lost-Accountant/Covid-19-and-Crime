@@ -394,9 +394,10 @@ autoplot(forecast$forecast$larceny_from_vehicle) +
   xlab(paste("Numebr of days since", common_time[1]))
 
 autoplot(forecast$forecast$residuals) +
-  ggtitle("Prediction on how many more covid19 cases compared to yesterday") +
+  ggtitle("Prediction on how many more covid19 cases
+          with the help of larceny from vehicle record") +
   theme_classic() +
-  ylab("Day-to-day change") +
+  ylab("Daily additional confirmed number") +
   xlab(paste("Numebr of days since", common_time[1]))
 
 

@@ -411,12 +411,26 @@ ggplot(irf_dispute_2_gg, aes(x=lags)) +
 
 ### Step 8: Forecast
 ```{r var forecast}
-forecast(VAR_investigate) %>%
-  autoplot()
+# vandalism to covid
+forecast_vandalism <- forecast(VAR_vandalism)
 
-forecast(VAR_dispute) %>%
-  autoplot()
+autoplot(forecast_vandalism$forecast$residuals) +
+  ggtitle("Prediction on how many more covid19 cases
+          with the help of vandalism record") +
+  theme_classic() +
+  ylab("Daily additional confirmed number") +
+  xlab(paste("Number of days since", common_time[1]))
 
+# covid to verbal dispute
+forecast_dispute <- forecast(VAR_dispute)
+
+autoplot(forecast_dispute$forecast$dispute) +
+  ggtitle("Prediction on how many more verbal dispute cases compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Number of days since", common_time[1]))
+
+#### OPTIONAL
 accu_compare <- data.frame(rbind(accuracy(VAR_dispute$varresult[[1]]),
                                  accuracy(VAR_investigate$varresult[[1]]),
                                  accuracy(VAR_vandalism$varresult[[1]])))
