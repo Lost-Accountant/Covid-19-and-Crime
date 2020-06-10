@@ -494,6 +494,11 @@ Row {data-height=300}
 # p <- ggplot(data = cbind(df, pred = predict(fm)), aes(x = x, y = y, color = A))
 # p <- p + geom_point() + geom_line(aes(y = pred))
 # ggplotly(p)
+dygraph(ts_diff_CH,
+         main = "Daily confirmed cases of
+         COVID-19 in Chicago")%>%
+  dySeries("cd7b965f", label = "Chicago")%>%
+  dyLegend(show = "always", hideOnMouseOut = FALSE)
 ```
 
 
