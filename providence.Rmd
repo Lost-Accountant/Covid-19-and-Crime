@@ -354,15 +354,13 @@ colnames(irf_vehicle_1_gg) <- c("mean", "lower", "upper")
 
 ggplot(irf_vehicle_1_gg, aes(x = lags)) +
   geom_line(aes(y = mean), color = "black") +
-  #geom_line(aes(y = upper), color = "red", linetype = "dashed") +
-  #geom_line(aes(y = lower), color = "red", linetype = "dashed") +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
   ggtitle("How many more daily covid19 cases there will be 
           after 1 larceny from vehicle") +
   xlab("Number of days after a larceny from vehicle")+
-  ylab("Number of covid 19 cases")
+  ylab("Number of new covid 19 cases")
 
 
 irf_vehicle_2_gg <- data.frame(irf_vehicle2$irf$residuals[,1],

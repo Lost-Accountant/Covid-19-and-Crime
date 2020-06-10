@@ -317,7 +317,7 @@ causality(VAR_theft, cause = "residuals")
 ```
 COVID-19 may help to predict theft. (p-value = 0.06).
 
-
+#### VEHICLE THEFT
 ```{r}
 vehicle <- chicago %>%
   filter(primary_type == 'MOTOR VEHICLE THEFT')%>%
@@ -350,20 +350,72 @@ covid-19 is significant to vehicle theft (p-value = 0.018)
 Assault, criminal damage and theft have granger causality.
 
 ```{r irf}
+# use car theft and criminal damage
 par(mfrow = c(1,2))
-irf_criminal_1 <- irf(VAR_criminal, 
-                         impulse = "criminal", 
-                         response = "residuals", 
-                         n.ahead = 24,
-                         ortho = F)
+lags = c(1:25)
+
+# criminal damange
+# only significant one is from covid to crime
 irf_criminal_2 <- irf(VAR_criminal, 
                          impulse = "residuals", 
                          response = "criminal", 
                          n.ahead = 24,
                          ortho = F)
-plot(irf_criminal_1)
+
 plot(irf_criminal_2)
 
+
+# ggplot version of it.
+irf_criminal_2_gg <- data.frame(
+  irf_criminal_2$irf$residuals[,1],
+  irf_criminal_2$Lower$residuals[,1],
+  irf_criminal_2$Upper$residuals[,1]
+)
+
+colnames(irf_criminal_2_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_criminal_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more criminal damage cases per day there will be
+          after 1 confirmed covid19 case") +
+  xlab("Number of days after 1 covid19 case")+
+  ylab("Number of criminal damange per day")
+
+# vehicle theft
+# only significant one is from covid to crime
+irf_vehicle_2 <- irf(VAR_vehicle,
+                     impulse = "residuals",
+                     response = "vehicle",
+                     n.ahead = 24)
+
+plot(irf_vehicle_2)
+
+
+# ggplot version of it
+irf_vehicle_2_gg <- data.frame(
+  irf_vehicle_2$irf$residuals[,1],
+  irf_vehicle_2$Lower$residuals[,1],
+  irf_vehicle_2$Upper$residuals[,1]
+)
+
+colnames(irf_vehicle_2_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_vehicle_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more vehicle theft cases per day there will be
+          after 1 confirmed covid19 case") +
+  xlab("Number of days after 1 covid19 case")+
+  ylab("Number of vehicle theft per day")
+
+```
+```{r optional stuff}
+# Decide to not use theft but vehicle theft
 # theft
 irf_theft_1 <- irf(VAR_theft, 
                          impulse = "theft", 
@@ -413,5 +465,27 @@ ir.theft2 <- irf(VAR_theft,
                          cumulative = T)
 plot(ir.theft2)
 ```
-  
-==================================
+
+### Step 8: Forecast
+```{r var forecast}
+# criminal damange and vehicle theft
+forecast_criminal <- forecast(VAR_criminal)
+forecast_vehicle <- forecast(VAR_vehicle)
+
+
+# only impulse from covid are significant
+# only forecast on crime are being helped
+autoplot(forecast_criminal$forecast$criminal) +
+  ggtitle("Prediction on how many more criminal damage cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
+
+autoplot(forecast_vehicle$forecast$vehicle) +
+  ggtitle("Prediction on how many mroe vehicle theft cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
+```
