@@ -111,6 +111,7 @@ chicago %>%
 # This dataset doesn't have 'day of the week' yet.
 
 # daily
+# 2020 only
 chicago %>%
   dplyr::select(Date, primary_type, year) %>%
   filter(primary_type %in% chicago_summary$primary_type[1:5], year == 2020) %>%
@@ -127,7 +128,8 @@ chicago %>%
 # year to year comparison
 chicago %>%
   dplyr::select(y_month, month, primary_type, year) %>%
-  filter(primary_type %in% chicago_summary$primary_type[1:5]) %>%
+  filter(primary_type %in% chicago_summary$primary_type[1:5],
+         y_month != "2020-06") %>%
   count(year, month, primary_type) %>%
   na.omit() %>%
   ggplot(aes(x=month, y=n, group = year, color = as.character(year))) +
@@ -167,7 +169,7 @@ top5crime_diff <- na.omit(diff(top5crime_xts))
 ```
 
 ### Step 2: Construct combined time series
-## COVID 19 RELATED
+#### COVID 19 RELATED
 
 ```{r covid 19 related exploration}
 # extract for tranforming into time series data
@@ -237,8 +239,8 @@ adf.test(as.ts(CH_res_ts))
 ```{r top 5 crime VAR}
 # specify common time range
 # start from when covid was a thing
-# end with crime since it is manually updated
-common_time <- seq.Date(start(CH_res_ts), end(top5crime_diff), by = "day")
+# end on May 25, to avoid effect of protests related to George Floyid.
+common_time <- seq.Date(start(CH_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
@@ -275,43 +277,48 @@ optimal_theft <- VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.m
 
 VAR_assault <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=optimal_assault$selection[1])
 VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=optimal_battery$selection[1])
-VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]),
-                    p=optimal_criminal$selection[1])
-VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
-                     p=optimal_deceptive$selection[1])
+VAR_criminal <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]), p=optimal_criminal$selection[1])
+VAR_deceptive <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]), p=optimal_deceptive$selection[1])
 VAR_theft <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_theft$selection[1])
-
-summary(VAR_assault)
 ```
 
 ### Step 6: Granger Causality test
-
+#### ASSAULT
 ```{r}
 causality(VAR_assault, cause = colnames(combined_diff)[1])
 causality(VAR_assault, cause = "residuals")
 ```
+Weakly instantneous causality.
 
+#### BATTERY ASSAULT
 ```{r}
 causality(VAR_battery, cause = colnames(combined_diff)[2])
 causality(VAR_battery, cause = "residuals")
 ```
+covid weakly significant to battery assault.
+
+#### CRIMINAL DAMAGE
 ```{r}
 causality(VAR_criminal, cause = colnames(combined_diff)[3])
 causality(VAR_criminal, cause = "residuals")
 ```
-Very significant causality on criminal damage (p-value = 0.01221)
+Very significant causality to criminal damage (p-value = 0.01221)
 
+#### DECEPTIVE PRACTICE
 ```{r}
 causality(VAR_deceptive, cause = colnames(combined_diff)[4])
 causality(VAR_deceptive, cause = "residuals")
 ```
+Nothing significant
 
+#### THEFT
 ```{r}
 causality(VAR_theft, cause = colnames(combined_diff)[5])
 causality(VAR_theft, cause = "residuals")
 ```
-COVID-19 may help to predict theft. (p-value = 0.05294)
+COVID-19 may help to predict theft. (p-value = 0.06).
 
+#### VEHICLE THEFT
 ```{r}
 vehicle <- chicago %>%
   filter(primary_type == 'MOTOR VEHICLE THEFT')%>%
@@ -337,27 +344,79 @@ VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff2)[,c(1,2)]), p=optimal_vehicle$
 causality(VAR_vehicle, cause = colnames(combined_diff2)[1])
 causality(VAR_vehicle, cause = "residuals")
 ```
-covid-19 is significant to vehicle theft (p-value = 0.005237)
+covid-19 is significant to vehicle theft (p-value = 0.018)
 
 ### Step 7: Impulse Response Function
 
 Assault, criminal damage and theft have granger causality.
 
 ```{r irf}
+# use car theft and criminal damage
 par(mfrow = c(1,2))
-irf_criminal_1 <- irf(VAR_criminal, 
-                         impulse = "criminal", 
-                         response = "residuals", 
-                         n.ahead = 24,
-                         ortho = F)
+lags = c(1:25)
+
+# criminal damange
+# only significant one is from covid to crime
 irf_criminal_2 <- irf(VAR_criminal, 
                          impulse = "residuals", 
                          response = "criminal", 
                          n.ahead = 24,
                          ortho = F)
-plot(irf_criminal_1)
+
 plot(irf_criminal_2)
 
+
+# ggplot version of it.
+irf_criminal_2_gg <- data.frame(
+  irf_criminal_2$irf$residuals[,1],
+  irf_criminal_2$Lower$residuals[,1],
+  irf_criminal_2$Upper$residuals[,1]
+)
+
+colnames(irf_criminal_2_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_criminal_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more criminal damage cases per day there will be
+          after 1 confirmed covid19 case") +
+  xlab("Number of days after 1 covid19 case")+
+  ylab("Number of criminal damange per day")
+
+# vehicle theft
+# only significant one is from covid to crime
+irf_vehicle_2 <- irf(VAR_vehicle,
+                     impulse = "residuals",
+                     response = "vehicle",
+                     n.ahead = 24)
+
+plot(irf_vehicle_2)
+
+
+# ggplot version of it
+irf_vehicle_2_gg <- data.frame(
+  irf_vehicle_2$irf$residuals[,1],
+  irf_vehicle_2$Lower$residuals[,1],
+  irf_vehicle_2$Upper$residuals[,1]
+)
+
+colnames(irf_vehicle_2_gg) <- c("mean", "lower", "upper")
+
+ggplot(irf_vehicle_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more vehicle theft cases per day there will be
+          after 1 confirmed covid19 case") +
+  xlab("Number of days after 1 covid19 case")+
+  ylab("Number of vehicle theft per day")
+
+```
+```{r optional stuff}
+# Decide to not use theft but vehicle theft
 # theft
 irf_theft_1 <- irf(VAR_theft, 
                          impulse = "theft", 
@@ -372,6 +431,7 @@ irf_theft_2 <- irf(VAR_theft,
 plot(irf_theft_1)
 plot(irf_theft_2)
 
+### CONCLUDE TO NOT USE CUMULATIVE
 # Calculate impulse response
 ir.criminal1 <- irf(VAR_criminal,impulse = "criminal", 
                          response = "residuals", 
@@ -406,5 +466,27 @@ ir.theft2 <- irf(VAR_theft,
                          cumulative = T)
 plot(ir.theft2)
 ```
-  
-==================================
+
+### Step 8: Forecast
+```{r var forecast}
+# criminal damange and vehicle theft
+forecast_criminal <- forecast(VAR_criminal)
+forecast_vehicle <- forecast(VAR_vehicle)
+
+
+# only impulse from covid are significant
+# only forecast on crime are being helped
+autoplot(forecast_criminal$forecast$criminal) +
+  ggtitle("Prediction on how many more criminal damage cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
+
+autoplot(forecast_vehicle$forecast$vehicle) +
+  ggtitle("Prediction on how many mroe vehicle theft cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
+```
