@@ -10,19 +10,46 @@ library(xts)
 library(COVID19) # to get data about covid 19
 library(forecast) #arima model
 library(vars) #VAR and Causality
+library(aTSA) # adf.test
+
 ```
 
 # Philadelphia
 ```{r}
-phil <- read.csv('/Users/chelseahuang/Desktop/data/phil_crime/phil_crime.csv')
+phil2020 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2&format=csv&skipfields=cartodb_id,the_geom,the_geom_webmercator&q=SELECT%20*%20,%20ST_Y(the_geom)%20AS%20lat,%20ST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E=%20%272020-01-01%27%20AND%20dispatch_date_time%20%3C%20%272021-01-01%27')
+
+phil2019 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2&format=csv&skipfields=cartodb_id,the_geom,the_geom_webmercator&q=SELECT%20*%20,%20ST_Y(the_geom)%20AS%20lat,%20ST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E=%20%272019-01-01%27%20AND%20dispatch_date_time%20%3C%20%272020-01-01%27')
+
+phil2018 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2&format=csv&skipfields=cartodb_id,the_geom,the_geom_webmercator&q=SELECT%20*%20,%20ST_Y(the_geom)%20AS%20lat,%20ST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E=%20%272018-01-01%27%20AND%20dispatch_date_time%20%3C%20%272019-01-01%27')
+
+phil2017 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2&format=csv&skipfields=cartodb_id,the_geom,the_geom_webmercator&q=SELECT%20*%20,%20ST_Y(the_geom)%20AS%20lat,%20ST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E=%20%272017-01-01%27%20AND%20dispatch_date_time%20%3C%20%272018-01-01%27')
+
+phil2016 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2&format=csv&skipfields=cartodb_id,the_geom,the_geom_webmercator&q=SELECT%20*%20,%20ST_Y(the_geom)%20AS%20lat,%20ST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E=%20%272016-01-01%27%20AND%20dispatch_date_time%20%3C%20%272017-01-01%27')
+
+phil2015 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2&format=csv&skipfields=cartodb_id,the_geom,the_geom_webmercator&q=SELECT%20*%20,%20ST_Y(the_geom)%20AS%20lat,%20ST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E=%20%272015-01-01%27%20AND%20dispatch_date_time%20%3C%20%272016-01-01%27')
 ```
 
-```{r}
+```{r attach datasets together}
+
+phil <- do.call("rbind", list(phil2020, phil2019, phil2018, phil2017, phil2016, phil2015))
+
+#phil <- read.csv('/Users/chelseahuang/Desktop/data/phil_crime/phil_crime.csv')
+#phil <- read.csv('C:/Users/sshan/Desktop/phillydata/phillydata.csv')
+
+```
+
+```{r date mutate}
 # add YEAR, MONTH
 phil <- phil %>%
   mutate(y_month = substr(dispatch_date_time, start = 1, stop = 7)) %>%
   mutate(YEAR = substr(dispatch_date_time, start = 1, stop = 4)) %>%
   mutate(MONTH = substr(dispatch_date_time, start = 6, stop = 7))
+
+#Rolled aggravted assaults into other assaults
+
+phil$text_general_code <- gsub("Aggravated Assault No Firearm", "Other Assaults", phil$text_general_code)
+phil$text_general_code <- gsub("Aggravated Assault Firearm", "Other Assaults", phil$text_general_code)
+
 ```
 
 
@@ -47,7 +74,7 @@ phil %>%
 # exclude May due to incomplete info
 phil %>%
   dplyr::select(y_month, text_general_code) %>%
-  filter(text_general_code %in% phil_summary$text_general_code[1:7], y_month != "2020-05") %>% 
+  filter(text_general_code %in% phil_summary$text_general_code[1:7], y_month != "2020-06") %>% 
   count(y_month, text_general_code) %>%
   ggplot(aes(y_month, n, group = text_general_code, fill = text_general_code)) +
   geom_area(size = 0.01, alpha = 0.5) + 
@@ -81,7 +108,7 @@ phil %>%
 # exclude May
 phil %>%
   dplyr::select(MONTH, text_general_code, YEAR) %>%
-  filter(text_general_code %in% phil_summary$text_general_code[1:7], YEAR == 2020, MONTH != 05) %>% 
+  filter(text_general_code %in% phil_summary$text_general_code[1:7], YEAR == 2020, MONTH != "06") %>% 
   count(MONTH, text_general_code) %>%
   ggplot(aes(MONTH, n, group = text_general_code, color = text_general_code)) +
   geom_line() +
@@ -206,7 +233,7 @@ adf.test(as.ts(PA_res_ts))
 # specify common time range
 # start from when covid was a thing
 # end with crime since it is manually updated
-common_time <- seq.Date(start(PA_res_ts), end(top5crime_diff), by = "day")
+common_time <- seq.Date(start(PA_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
@@ -266,6 +293,7 @@ serial.test(VAR_assault) # no autocorrelation in errors
 arch.test(VAR_assault)
 normality.test(VAR_assault) # not normal
 ```
+
 ```{r granger vehicle}
 causality(VAR_vehicle, cause = colnames(combined_diff)[3])
 causality(VAR_vehicle, cause = "residuals")
@@ -282,6 +310,7 @@ Instantaneous causality appears when we include the current information of varia
 causality(VAR_thefts, cause = colnames(combined_diff)[4])
 causality(VAR_thefts, cause = "residuals")
 ```
+slightly signifigant instantenous causality between thefts and COVID-19 (0.07509)
 
 ```{r granger vandalism}
 causality(VAR_vandalism, cause = colnames(combined_diff)[5])
@@ -294,9 +323,13 @@ instantaneous causality between: vandalism and residuals (p-value = 0.03222)
 
 Only thefts from vehicle may have granger causality.
 
-```{r irf}
+```{r irf graphs, theft from vehicle, theft, vandalism}
+### code to produce the irf graphs in ggplot and ggplotly
+### theft from vehicle irf graph
+
 par(mfrow = c(1,2))
-# vehicle theft
+lags = c(1:25)
+# theft from vehicle
 irf_vehicle_1 <- irf(VAR_vehicle, 
                          impulse = "vehicle", 
                          response = "residuals", 
@@ -305,15 +338,164 @@ irf_vehicle_2 <- irf(VAR_vehicle,
                          impulse = "residuals", 
                          response = "vehicle", 
                          n.ahead = 24)
-plot(irf_vehicle_1)
-plot(irf_vehicle_2)
+#plot(irf_vehicle_1)
+#plot(irf_vehicle_2)
+
+###  ggplot version of irf graph of theft from vehicle
+
+irf_vehicle_2_gg <- data.frame(
+  irf_vehicle_2$irf$residuals[,1],
+  irf_vehicle_2$Lower$residuals[,1],
+  irf_vehicle_2$Upper$residuals[,1])
+
+colnames(irf_vehicle_2_gg) <- c("mean", "lower", "upper")
+
+irf_vehicle_2_ggly <-  ggplot(irf_vehicle_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("Increase in incidents of theft from vehicle per day after 1 confirmed covid19 case") +
+  xlab("Number of days after 1 covid19 case") +
+  ylab("Number of thefts from vehicle per day")
+
+irf_vehicle_2_ggly
+
+######### irf graph of theft
+###weak signifigance for instantenous causality
+
+par(mfrow = c(1,2))
+lags = c(1:25)
+# theft from vehicle
+irf_theft_1 <- irf(VAR_thefts, 
+                         impulse = "thefts", 
+                         response = "residuals", 
+                         n.ahead = 24)
+irf_theft_2 <- irf(VAR_thefts, 
+                         impulse = "residuals", 
+                         response = "thefts", 
+                         n.ahead = 24)
+
+###  ggplot version of irf graph of theft
+#irf_theft_2, impulse = residuals (COVID), response = theft
+irf_theft_2_gg <- data.frame(
+  irf_theft_2$irf$residuals[,1],
+  irf_theft_2$Lower$residuals[,1],
+  irf_theft_2$Upper$residuals[,1])
+
+colnames(irf_theft_2_gg) <- c("mean", "lower", "upper")
+
+irf_theft_2_ggly <-  ggplot(irf_theft_2_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("Increase in confirmed COVID19 cases after theft") +
+  xlab("Number of days after 1 covid19 case") +
+  ylab("Number of thefts per day")
+
+irf_theft_2_ggly
+
+######irf_theft_1, impulse = theft, response = residuals (COVID)
+#irf_theft_1_gg <- data.frame(
+  #irf_theft_1$irf$theft[,1],
+  #irf_theft_1$Lower$theft[,1],
+  #irf_theft_1$Upper$theft[,1])
+
+#colnames(irf_theft_1_gg) <- c("mean", "lower", "upper")
+
+#irf_theft_1_ggly <-  ggplot(irf_theft_1_gg, aes(x = lags)) +
+  #geom_line(aes(y = mean), color = "black") +
+  #geom_hline(yintercept = 0, color = "blue") +
+  #geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  #theme_classic() +
+  #ggtitle("Increase in incidents of thefts per day after 1 confirmed covid19 case") +
+  #xlab("Number of days after 1 incident of theft") +
+  #ylab("Number of confirmed cases per day")
+
+#irf_theft_1_ggly
+########
+
+### Vandalism
+irf_vandalism_1 <- irf(VAR_vandalism, 
+                         impulse = "vandalism", 
+                         response = "residuals", 
+                         n.ahead = 24)
+irf_vandalism_2 <- irf(VAR_vandalism, 
+                         impulse = "residuals", 
+                         response = "vandalism", 
+                         n.ahead = 24)
+irf_vandalism_2_gg <- data.frame(
+  irf_vandalism_1$irf$vandalism[,1],
+  irf_vandalism_1$Lower$vandalism[,1],
+  irf_vandalism_1$Upper$vandalism[,1])
+irf_vandalism_2_ggly <-  ggplot(irf_vandalism_1_gg, aes(x = lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("Increase in incidents of vandalism per day after 1 confirmed covid19 case") +
+  xlab("Number of days after 1 incident of vandalism") +
+  ylab("Number of confirmed cases per day")
+
+irf_vandalism_2_ggly
 
 ```
 
 ### Step 8: Forecast
-```{r var forecast}
-forecast(VAR_vehicle) %>%
-  autoplot()
+```{r var forecast autoplot}
+# forecast of theft from vehicle and theft
+#first section is the models done in autoplot, second is dygraph
+
+# only impulse from covid are significant
+
+forecast_theft <- forecast(VAR_thefts)        #forecast for thefts      CURRENTLY HAS LOWEST P VALUE
+forecast_vehicle <- forecast(VAR_vehicle)     #forecast for thefts from vehicle     HAD A LOW P VALUE AT ONE POINT
+forecast_vandalism <- forecast(VAR_vandalism) #forecast for vandalism             HAD A LOW P VALUE AT ONE POINT
+#the other VAR models with no signifigance to covid
+forecast_assault <- forecast(VAR_assault)     #forecast for all assaults
+forecast_offense <- forecast(VAR_offense)     #forecast for all other offenses
+
+
+###forecast for theft
+autoplot(forecast_theft$forecast$thefts) +
+  ggtitle("Prediction for incident count of thefts compared to previous day") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Number of days since", common_time[1]))
+
+###forecast for theft from vehicle
+autoplot(forecast_vehicle$forecast$vehicle) +
+  ggtitle("Prediction on how many more vehicle theft cases
+          compared to yesterday") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Numebr of days since", common_time[1]))
+
+
+###forecast for vandalism
+
+autoplot(forecast_vandalism$forecast$vandalism) +
+  ggtitle("Prediction for incidents of vandalism compared to previous day") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Number of days since", common_time[1]))
+
+###forecast for assault
+
+autoplot(forecast_assault$forecast$assault) +
+  ggtitle("Prediction for incidents of assault compared to previous day") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Number of days since", common_time[1]))
+
+###forecast for all other offenses
+###really wouldnt use this one
+autoplot(forecast_offense$forecast$offense) +
+  ggtitle("Prediction for all other offenses compared to previous day") +
+  theme_classic() +
+  ylab("Day-to-day change") +
+  xlab(paste("Number of days since", common_time[1]))
 
 accu_compare <- data.frame(rbind(accuracy(VAR_vehicle$varresult[[1]]),
                                  accuracy(VAR_thefts$varresult[[1]]),
@@ -322,6 +504,120 @@ rownames(accu_compare) <- c('vehicle', 'thefts', 'vandalism')
 kableExtra::kable(accu_compare, format = 'markdown')
 ```
 
+```{r custom function}
+interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
+  value = g.getValue(row, col);
+  if(value[0] != value[2]) {
+    lower = Dygraph.numberValueFormatter(value[0], opts);
+    upper = Dygraph.numberValueFormatter(value[2], opts);
+    return '[' + lower + ', ' + upper + ']';
+  } else {
+    return Dygraph.numberValueFormatter(num, opts);
+  }
+}"
+```
+
+```{r VAR forecasting philly dygraph}
+#VAR Forecasting in Philly
+
+#forecast for theft
+#slightly signfigant
+forecast_theft$forecast$thefts %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in incidents of theft in Philadelphia",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Number of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+
+#forecast for theft from vehicle
+#signifigant at one point
+forecast_vehicle$forecast$vehicle %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in incidents of theft from vehicle in Philadelphia",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Number of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+
+###forecast of vandalism
+#signifigant at one point
+forecast_vandalism$forecast$vandalism %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in incidents of vandalism in Philadelphia",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Number of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+
+#forecast for assault
+forecast_assault$forecast$assault %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in incidents of all assaults in Philadelphia",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Number of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+
+#forecast for all other offenses
+forecast_offense$forecast$offense %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in incidents of All other offenses in Philadelphia",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Number of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+```
 ### CONCLUSION (Last update: MAY 30) 
 Slightly non-significant contribution on prediction:
   thefts from vehicle (p-value=0.0625)
@@ -329,259 +625,12 @@ Slightly non-significant contribution on prediction:
 Significant simultaneous movement:
  	 Offense (p-value = 0.04408), thefts from vehicle (p-value = 0.02328), 
 vandalism (p-value = 0.03222)
-
+### Update 6/11/2020
+Slightly non-signifigant contribution on prediction of theft
+theft from vehicle no longer signifgant
+vandalism no longer signifgant
   
 ==================================
 
-# Boston Crime
-## Load crime data
 
-```{r crime data info}
-length(unique(boston_summary$OFFENSE_DESCRIPTION))
-# number of crime categories: 283
-length(unique(boston$DISTRICT))
-# number of district: 14
-
-boston %>%
-  ggplot(aes(x=DAY_OF_WEEK,fill=DAY_OF_WEEK)) +
-  geom_bar(width=0.5) + 
-  theme_classic() +
-  labs(y='Number of Crimes',x='Day of Week')
-
-```
-
-```{r}
-# bar chart of 5 most frequent crime over the years
-boston %>%
-  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
-  ggplot(aes(x=OFFENSE_DESCRIPTION,fill=OFFENSE_DESCRIPTION)) +
-  geom_bar(width=0.5) +
-  coord_flip() +
-  theme_classic() +
-  labs(y='Number of Crimes',x='Offense Description')
-```
-
-### Univariate Model
-#### Simple AR model
-```{r univariate model}
-# white noise test
-for (i in 1:2) {
-  print(Box.test(as.ts(dispute_diff_xts), type='Ljung-Box',lag=6*i))
-}
-
-# plot ACF and PACF
-acf(as.ts(dispute_diff_xts))
-pacf(as.ts(dispute_diff_xts))
-
-# k = 3 for PACF
-dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(3,0,0))
-dispute_ar
-
-dispute_ar <- arima(as.ts(dispute_diff_xts), order = c(3,0,1)) #ARMA(3,1) is better than above
-dispute_ar
-
-# p = 10 for comparison against VAR
-dispute_ar_10 <- arima(as.ts(dispute_diff_xts), order = c(10,0,0))
-dispute_ar_10
-
-# auto arima model
-dispute_ar_auto <- forecast::auto.arima(as.ts(dispute_diff_xts)) 
-dispute_ar_auto
-
-# since auto-arima says fit an ARIMA(0,0,1) model
-dispute_diff_xts.fit <- arima(as.ts(dispute_diff_xts), order=c(0,0,1))
-dispute_diff_xts.fit
-for (i in 1:2) {
-  print(Box.test(dispute_diff_xts.fit$residual, type='Ljung-Box',lag=6*i))
-}
-
-residual <- dispute_diff_xts.fit$resid
-par(mfrow=c(1,2))
-acf(residual)
-pacf(residual)
-Box.test(residual, type='Ljung-Box') #p-value=0.44, fit was good
-
-par(mfrow=c(1,2))
-acf(residual^2)
-pacf(residual^2)
-Box.test(residual^2, type='Ljung-Box') 
-# the squares of residuals are a sequence of white noise; 
-# the residuals are homoscedastic; No ARCH effect
-# The Ljung-box test confirms that the residuals do not have heteroscedasticity because the p-values are very large.
-```
-```{r ARCH test, eval=F}
-library(aTSA)
-aTSA::arch.test(dispute_diff_xts.fit)
-# The plots of residuals, squared residuals, p.values of PQ and LM tests 
-# Although, the p-values of Portmanteau test are pretty high
-# Lagrange multiplier test coefficients are significant, at least until lag 8
-
-library(FinTS)
-dispute_archTest <- ArchTest(residual,lags=12)
-dispute_archTest
-
-#we reject the null hypothesis and conclude the presence of ARCH(12) effects.
-```
-
-```{r bayesGARCH, eval=F}
-library(bayesGARCH)
-MCMC <- bayesGARCH(as.numeric(as.ts((dispute_diff_xts))), control = list(n.chain=2, l.chain=100))
-plot(MCMC)
-```
-
-```{r EXP SMOOTHING}
-#simple exponential smoothing for default ts assuming no trend
-dispute_forecasts <- HoltWinters(as.ts(dispute_diff_xts), beta=F, gamma=F,l.start = -10)
-dispute_forecasts
-plot(dispute_forecasts)
-dispute_forecasts$SSE
-# sum of squared error = 3657.46
-
-dispute_fitets <- ets(as.ts(dispute_diff_xts))
-checkresiduals(dispute_fitets)
-summary(dispute_fitets)
-autoplot(forecast.ets(dispute_fitets))
-# "ANN" is simple exponential smoothing with additive errors
-
-library(forecast)
-# predicting for next 14 days
-dispute_forecasts2 <- forecast:::forecast.HoltWinters(dispute_forecasts, h=14)
-#dispute_forecasts2
-forecast:::plot.forecast(dispute_forecasts2)
-dispute_forecasts2$residuals # 1 NA exist
-b <- dispute_forecasts2$residuals[-which(is.na(dispute_forecasts2$residuals))]
-acf(b,plot=T)
-Box.test(dispute_forecasts2$residual, type="Ljung-Box") # not indep
-
-plot(forecast(dispute_ar_auto, bootstrap = T))
-
-forecast::checkresiduals(dispute_ar_auto, test = F)
-forecast::checkresiduals(dispute_ar_auto, plot = F)
-```
-
-```{r}
-plotForecastErrors <- function(forecasterrors)
-  {
-     # make a histogram of the forecast errors:
-     mybinsize <- IQR(forecasterrors, na.rm = T)/4
-     mysd   <- sd(forecasterrors, na.rm = T)
-     mymin  <- min(forecasterrors, na.rm = T) - mysd*5
-     mymax  <- max(forecasterrors, na.rm = T) + mysd*3
-     # generate normally distributed data with mean 0 and standard deviation mysd
-     mynorm <- rnorm(10000, mean=0, sd=mysd)
-     mymin2 <- min(mynorm)
-     mymax2 <- max(mynorm)
-     if (mymin2 < mymin) { mymin <- mymin2 }
-     if (mymax2 > mymax) { mymax <- mymax2 }
-     # make a red histogram of the forecast errors, with the normally distributed data overlaid:
-     mybins <- seq(mymin, mymax, mybinsize)
-     hist(forecasterrors, col="red", freq=FALSE, breaks=mybins)
-     # freq=FALSE ensures the area under the histogram = 1
-     # generate normally distributed data with mean 0 and standard deviation mysd
-     myhist <- hist(mynorm, plot=FALSE, breaks=mybins)
-     # plot the normal curve as a blue line on top of the histogram of forecast errors:
-     points(myhist$mids, myhist$density, type="l", col="blue", lwd=2)
-}
-#The plot shows that the distribution of forecast errors is roughly centred on zero, and is more or less normally distributed.
-#The Ljung-Box test showed that there is little evidence of non-zero autocorrelations in the in-sample forecast errors, and the distribution of forecast errors seems to be normally distributed with mean zero. 
-# This suggests that the simple exponential smoothing method provides an adequate predictive model for water usage. 
-# Furthermore, the assumptions that the 80% and 95% predictions intervals were based upon
-#(that there are no autocorrelations in the forecast errors, and the forecast errors are normally distributed with mean zero and constant variance) are probably valid.
-
-plotForecastErrors(dispute_forecasts2$residuals)
-```
-
-```{r CROSS VALIDATION, eval=F}
-#---------Cross validation---------------
-#auto.arima forecast function for time series cross validation
-autoplot(forecast(dispute_ar_auto, bootstrap = T))
-
-library(zoo)
-z <- read.zoo(dispute[])
-training <- window(z, start='2017-12-01', end='2020-05-17')
-testset <- window(z, start='2015-06-15', end='2017-11-29')
-
-training <- window(as.ts(dispute_diff_xts), end=39)
-testset <- window(as.ts(dispute_diff_xts), start=40)
-
-fc <- function(y, h, xreg)
-{
-  X <- window(xreg, start = 1, end = length(y))
-  #X <- xreg[1:length(y),]
-  if(NROW(xreg) < length(y) + h)
-    stop("Not enough xreg data for forecasting")
-  #newX <- window(xreg, start = length(y)+(1:h))
-  #newX <- xreg[length(y)+(1:h),]
-  fit <- auto.arima(y, xreg=X)
-  forecast(fit, xreg=newX)
-}
-
-e <- tsCV(y=training, fc, xreg=testset)
-# error: results in NAs 
-
-autoplot(e)
-sqrt(mean(e^2,na.rm = T))
-```
-
-
-```{r}
-var_dispute.stabil <- vars::stability(x=VAR_dispute, type ="OLS-CUSUM", h = 0.15, dynamic = FALSE, rescale = TRUE)
-
-plot(var_dispute.stabil)
-# VAR is stable
-```
-
-```{r VAR}
-# select the optimal lag number within 10
-VARselect(na.omit(combined_diff), lag.max = 10, type = 'const')
-# LET'S USE 8
-
-# VAR model estimation
-VAR_dispute <- vars::VAR(y=na.omit(combined_diff), p = 8)
-```
-
-```{r FORECASTS FROM MODELS SUMMARY}
-dispute_struct <- StructTS(as.ts(dispute_diff_xts))
-dispute_struct_forec <- forecast(dispute_struct, h=14)
-
-# all forcast for 14 days
-par(mfrow=c(6,1))
-par(mar=c(1,1,1,1))
-plot(forecast(dispute_ar_auto,14, bootstrap = T))
-plot(forecast(dispute_diff_xts.fit))
-plot(forecast(dispute_fitets))
-forecast:::plot.forecast(dispute_forecasts2)
-plot(dispute_annm)
-plot(dispute_struct_forec)
-```
-
-```{r, warning=F}
-# model comparison
-accu_auto <- accuracy(dispute_ar_auto)
-accu_auto2 <- accuracy(dispute_diff_xts.fit)
-accu_ets <- accuracy(dispute_fitets)
-accu_hw <- accuracy(dispute_forecasts2)
-accu_ann <- accuracy(dispute_ann)
-accu_stru <- accuracy(dispute_struct_forec)
-
-model_compare <- data.frame(rbind(accu_auto, accu_auto2, accu_ets, accu_hw, accu_ann, accu_stru))
-rownames(model_compare) <- c('Auto ARIMA(0 mean)', 'Auto ARIMA', 'ETS','HoltWinters', 'Neural Net', 'Structural')
-kableExtra::kable(model_compare, format='markdown')
-```
-
-# MULTIVARIATE
-```{r}
-xy = data.frame(combined_diff[,1], combined_diff[,2], combined_diff[,3],combined_diff[,4],combined_diff[,5],combined_diff[,6])
-# Create a daily Date object - helps my work on dates
-inds <- seq(as.Date("2020-03-13"), as.Date("2020-05-19"), by = "day")
-mymts = ts(xy, start = c(2020, as.numeric(format(inds[1], "%j"))),
-           frequency = 365)
-plot(mymts)
-```
-```{r}
-apply(combined_diff, 2, adf.test)
-autoplot(ts(na.omit(combined_diff))) +
-  ggtitle('Time Series Plot of the stationary Time-Series') +
-  theme(plot.title = element_text(hjust = 0.5)) #for centering the text
-```
 
