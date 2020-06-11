@@ -189,7 +189,7 @@ covid19_AT_diff$timeIid = covid19_AT_diff$timeInt
 
 # GAMM model
 # 50 too overfit. 15 looks decent
-gamAT <- gamm4::gamm4(confirmed ~  s(timeInt, k=70), random = ~(1|timeIid), 
+gamAT <- gamm4::gamm4(confirmed ~  s(timeInt, k=90), random = ~(1|timeIid), 
                       data=covid19_AT_diff, family=poisson(link='log'))
 
 # looks like random intercept is making little difference.
