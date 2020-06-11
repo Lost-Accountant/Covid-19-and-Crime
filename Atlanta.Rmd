@@ -11,6 +11,8 @@ library(COVID19) # to get data about covid 19
 library(forecast) #arima model
 library(vars) #VAR and Causality
 library(dplyr)
+library(dygraphs)
+library(plotly)
 ```
 
 ```{r covid 19 for Atlanta region}
@@ -149,8 +151,8 @@ colnames(top5crime) <- c('time',
                          'assault',
                          "autotheft",
                          "burglary",
-                         "larceny_fromvehicle",
-                         'larceny_nonvehicle')
+                         "larceny",
+                         'robbery')
 
 # create time series
 top5crime_xts <- ts_xts(top5crime[,1:2])
@@ -249,8 +251,8 @@ for (i in 1:(ncol(combined_diff) - 1)){
 optimal_assault <- VARselect(na.omit(combined_diff)[,c(1,6)], type = 'none', lag.max = 10)
 optimal_autotheft <- VARselect(na.omit(combined_diff)[,c(2,6)], type = 'none', lag.max = 10)
 optimal_burglary <- VARselect(na.omit(combined_diff)[,c(3,6)], type = 'none', lag.max = 10)
-optimal_larceny_fromvehicle <- VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
-optimal_larceny_nonvehicle <- VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
+optimal_larceny <- VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
+optimal_robbery <- VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
 
 # use AIC as selection criteria
 VAR_assault <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=optimal_assault$selection[1])
@@ -258,10 +260,10 @@ VAR_autotheft <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]),
                      p=optimal_autotheft$selection[1])
 VAR_burglary <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]),
                     p=optimal_burglary$selection[1])
-VAR_larceny_fromvehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
-                               p=optimal_larceny_fromvehicle$selection[1])
-VAR_larceny_nonvehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
-                              p=optimal_larceny_nonvehicle$selection[1])
+VAR_larceny <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
+                               p=optimal_larceny$selection[1])
+VAR_robbery <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
+                              p=optimal_robbery$selection[1])
 ```
 
 ### Step 6: Granger Causality test
@@ -281,11 +283,159 @@ causality(VAR_burglary, cause = "residuals")
 ```
 
 ```{r}
-causality(VAR_larceny_fromvehicle, cause = colnames(combined_diff)[4])
-causality(VAR_larceny_fromvehicle, cause = "residuals")
+causality(VAR_larceny, cause = colnames(combined_diff)[4])
+causality(VAR_larceny, cause = "residuals")
 ```
 
 ```{r}
-causality(VAR_larceny_nonvehicle, cause = colnames(combined_diff)[5])
-causality(VAR_larceny_nonvehicle, cause = "residuals")
+causality(VAR_robbery, cause = colnames(combined_diff)[5])
+causality(VAR_robbery, cause = "residuals")
 ```
+
+### Step 7: Impulse Response Function
+
+Only burglary weakly significant (p-value = 0.07361)
+```{r irf}
+lags = c(1:25)
+
+# only covid significant to burglary
+irf_burglary_1 <- irf(VAR_burglary,
+                      impulse = "residuals",
+                      response = "burglary",
+                      n.ahead = 24)
+# ggplot
+irf_burglary_1_gg <- data.frame(irf_burglary_1$irf$residuals[,1],
+                                irf_burglary_1$Lower$residuals[,1],
+                                irf_burglary_1$Upper$residuals[,1])
+
+colnames(irf_burglary_1_gg) <- c("mean", "lower", "upper")
+
+irf_burglary_1_plot <- ggplot(irf_burglary_1_gg, aes(x=lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more burglary cases per day there will be 
+          after 1 confirmed covid19 case") +
+  xlab("Number of days after a confimed covid 19 case")+
+  ylab("Number of bulglary cases")
+
+ggplotly(irf_burglary_1_plot)
+```
+
+### Step 8: Forecast
+```{r custom function}
+interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
+  value = g.getValue(row, col);
+  if(value[0] != value[2]) {
+    lower = Dygraph.numberValueFormatter(value[0], opts);
+    upper = Dygraph.numberValueFormatter(value[2], opts);
+    return '[' + lower + ', ' + upper + ']';
+  } else {
+    return Dygraph.numberValueFormatter(num, opts);
+  }
+}"
+```
+
+```{r}
+f_burglary <- forecast(VAR_burglary)
+f_burglary$forecast$burglary %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Prediction on how many more burglary cases
+          compared to yesterday', 
+          ylab = 'Day-to-day change') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(show = 'follow') %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+```
+
+```{r}
+f_assault <- forecast(VAR_assault)
+f_assault$forecast$assault %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Prediction on how many more aggregate assault cases
+          compared to yesterday', 
+          ylab = 'Day-to-day change') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(show = 'follow') %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+```
+
+```{r}
+f_autotheft <- forecast(VAR_autotheft)
+f_autotheft$forecast$autotheft %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Prediction on how many more auto theft cases
+          compared to yesterday', 
+          ylab = 'Day-to-day change') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(show = 'follow') %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+```
+
+```{r}
+f_larceny <- forecast(VAR_larceny)
+f_larceny$forecast$larceny %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Prediction on how many more larceny cases
+          compared to yesterday', 
+          ylab = 'Day-to-day change') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(show = 'follow') %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+```
+
+```{r}
+f_robbery <- forecast(VAR_robbery)
+f_robbery$forecast$robbery %>% 
+  {cbind(actuals=.$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = 'Prediction on how many more robbery cases
+          compared to yesterday', 
+          ylab = 'Day-to-day change') %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(show = 'follow') %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+```
+
+
+
