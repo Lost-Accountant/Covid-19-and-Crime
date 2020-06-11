@@ -193,6 +193,7 @@ seattle %>%
   ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
   geom_line() +
   facet_wrap(~offense) +
+  guides(color = guide_legend(reverse = TRUE)) +
   ggtitle("year to year comparison of the top 5 crime in Seattle in the past 6 years")
 ```
 
