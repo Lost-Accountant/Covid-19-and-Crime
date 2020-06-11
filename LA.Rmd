@@ -3,18 +3,44 @@ title: "LA"
 author: "Zhuyi Huang"
 output: pdf_document
 ---
-### 2020 ONLY
-```{r get LA data, 2020 only}
-LA <- read.socrata(
+```{r library, message = FALSE, warning = FALSE}
+library(RSocrata)
+library(tidyverse)
+library(tseries)
+library(tsbox) # transform data into time series
+library(xts)
+library(COVID19) # to get data about covid 19
+library(forecast) #arima model
+library(vars) #VAR and Causality
+library(plotly)
+library(dygraphs)
+```
+
+
+### Extract crime data
+```{r get LA data}
+# 2020 only
+LA_2020 <- read.socrata(
   'http://data.lacity.org/resource/2nrs-mtv8.csv',
   app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
+
+# 2014-2019
+LA_2014 <- read.socrata(
+  "https://data.lacity.org/resource/63jg-8b9z.csv?$where=date_occ >=  '2014-01-01'",
+  app_token = "hPU78MH7zKApdpUv4OVCInPOQ"
+)
+
+LA <- rbind(LA_2014, LA_2020)
+remove(LA_2014)
+remove(LA_2020)
 
 head(LA)
 
 # add date
 LA <- LA %>%
   mutate(y_month  = substr(date_occ, start = 1, stop = 7)) %>%
-  mutate(MONTH = substr(date_occ, start = 7, stop = 7))
+  mutate(month = substr(date_occ, start = 6, stop = 7)) %>%
+  mutate(year = substr(date_occ, start = 1, stop = 4))
 ```
 
 ```{r}
@@ -34,18 +60,54 @@ LA %>%
   labs(y='Number of Crimes',x='Offense Description')
 
 # per month
-# exclude May
+# exclude June
 LA %>%
-  dplyr::select(MONTH, crm_cd_desc) %>%
-  filter(crm_cd_desc %in% LA_summary$crm_cd_desc[1:5], MONTH != 05) %>% 
-  count(MONTH, crm_cd_desc) %>%
-  ggplot(aes(MONTH, n, group = crm_cd_desc, color = crm_cd_desc)) +
+  dplyr::select(month, crm_cd_desc) %>%
+  filter(crm_cd_desc %in% LA_summary$crm_cd_desc[1:5], month != 06) %>% 
+  count(month, crm_cd_desc) %>%
+  ggplot(aes(month, n, group = crm_cd_desc, color = crm_cd_desc)) +
   geom_line() +
   scale_color_brewer(palette = "Set1") +
   ggtitle("Monthly frequency of top 5 crime in LA in 2020") +
   theme(plot.title = element_text(hjust = 0.5))
 
-# This data set doesn't have 'day of the week' yet.
+# daily
+# 2020 only
+# similar scale, so use same scale for all graphs
+daily <- LA %>%
+  dplyr::select(date_occ, crm_cd_desc, year) %>%
+  filter(crm_cd_desc %in% LA_summary$crm_cd_desc[1:5],
+         year == 2020) %>%
+  count(date_occ, crm_cd_desc) %>%
+  ggplot(aes(date_occ, n, group = crm_cd_desc, color = crm_cd_desc)) +
+  geom_line() +
+  facet_free(~crm_cd_desc) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(LA_summary$crm_cd_desc[1:5]))) +
+  ggtitle("Frequency of top 5 crime in LA in 2020") +
+  theme(legend.position = "none")
+  
+ggplotly(daily)
+
+# year to year comparison
+# exlcude 2020-06
+# similar scale, so use same scale for all graphs
+yty <- LA %>%
+  dplyr::select(y_month, month, crm_cd_desc, year) %>%
+  filter(crm_cd_desc %in% LA_summary$crm_cd_desc[1:5],
+         y_month != "2020-06") %>%
+  count(year, month, crm_cd_desc) %>%
+  na.omit() %>%
+  ggplot(aes(x=month, y=n,
+             group = year,
+             color = as.character(year))) +
+  geom_line() +
+  facet_free(~crm_cd_desc) +
+  guides(color = guide_legend(reverse = TRUE)) +
+  ggtitle("year to year comparison of the top 5 crime in LA in the past 6 years") +
+  labs(col="Year")
+
+ggplotly(yty) %>%
+  layout(legend=list(traceorder="reversed"))
 ```
 
 ## VAR 
@@ -82,36 +144,38 @@ top5crime_diff <- na.omit(diff(top5crime_xts))
 ```
 
 ### Step 2: Construct combined time series
-## COVID 19 RELATED
+#### COVID 19 RELATED
 ```{r covid 19 extract Pennsylvania data}
-# extract Pennsylvania data from US data. 
-covid19_CA <- covid19("USA", level = 2) %>%
-  filter(administrative_area_level_2 == "California") %>%
-  # filter out days when confirmed is zero
-  filter(confirmed > 0)
+# extract LA data from US data. 
+covid19_LA <- covid19("USA", level = 3) %>%
+  filter(administrative_area_level_3 == "Los Angeles",
+         administrative_area_level_2 == "California") %>%
+  # stayed at 1 for long time
+  filter(confirmed > 1,
+         date < "2020-06-11")
 
 # calculate the difference per day
-covid19_CA_diff <- data.frame(diff(covid19_CA$confirmed))
-colnames(covid19_CA_diff)[1] = "confirmed"
-covid19_CA_diff$date = covid19_CA$date[2:length(covid19_CA$date)]
+covid19_LA_diff <- data.frame(diff(covid19_LA$confirmed))
+colnames(covid19_LA_diff)[1] = "confirmed"
+covid19_LA_diff$date = covid19_LA$date[2:length(covid19_LA$date)]
 
-head(covid19_CA)
+head(covid19_LA)
 ```
 
 ```{r covid 19 related exploration}
 # extract for tranforming into time series data
-ts_CA <- covid19_CA %>% 
+ts_LA <- covid19_LA %>% 
   dplyr::select(date, confirmed) %>%
   ts_xts()
 
 # plot time series of California infection
-ts_plot(ts_CA)
+ts_plot(ts_LA)
 # conduct ADF Test
-adf.test(as.ts(ts_CA))
+adf.test(as.ts(ts_LA))
 
 # try first log difference
-ts_diff_CA <- diff(ts_CA)
-ts_plot(ts_diff_CA)
+ts_diff_LA <- diff(ts_LA)
+ts_plot(ts_diff_LA)
 # still clearly not stationary
 # need de-trend
 
@@ -119,59 +183,73 @@ ts_plot(ts_diff_CA)
 # GAMM model from STA303 A3
 
 # time as integer
-covid19_CA_diff$timeInt = as.numeric(covid19_CA_diff$date)
+covid19_LA_diff$timeInt = as.numeric(covid19_LA_diff$date)
 # make a copy to avoid perfect collinearity
-covid19_CA_diff$timeIid = covid19_CA_diff$timeInt
+covid19_LA_diff$timeIid = covid19_LA_diff$timeInt
 
 # make a copy to avoid perfect collinearity
-covid19_CA_diff$timeIid = covid19_CA_diff$timeInt
+covid19_LA_diff$timeIid = covid19_LA_diff$timeInt
 
 # GAMM model
 # 50 too overfit. 15 looks decent
-gamCA <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
-	data=covid19_CA_diff, family=poisson(link='log'))
+gamLA <- gamm4::gamm4(confirmed ~  s(timeInt, k=90), random = ~(1|timeIid), 
+	data=covid19_LA_diff, family=poisson(link='log'))
+```
 
-lme4::VarCorr(gamCA$mer)
+```{r plot GAMM}
+lme4::VarCorr(gamLA$mer)
 # looks like random intercept is making little difference.
 # choose to not have random effect to preserve it for time series analysis
 
 # plot fitted value
-toPredict = data.frame(time = seq(covid19_CA_diff$date[1], 
-                                          covid19_CA_diff$date[length(covid19_CA_diff$date)],
+toPredict = data.frame(time = seq(covid19_LA_diff$date[1], 
+                                          covid19_LA_diff$date[length(covid19_LA_diff$date)],
                                   by = '1 day'))
 toPredict$timeInt = as.numeric(toPredict$time)
 
+matplot(toPredict$time, 
+        exp(do.call(cbind, mgcv::predict.gam(gamLA$gam, toPredict, se.fit=TRUE)) %*% 
+              Pmisc::ciMat()), 
+        col='red', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='Daliy Confirmed cases', 
+        ylim = c(0.5, 2000), xlim = as.Date(c(covid19_LA$date[1], covid19_LA$date[length(covid19_LA$date)])))
+title("Daily confirmed cases of COVID 19 in LA")
+matpoints(toPredict$time, covid19_LA_diff$confirmed, 
+          col = 'black',
+          type = 'l')
+```
+
+```{r covid 19 residuals}
 # obtain forecast
-forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamCA$gam, toPredict, se.fit=TRUE))))
+forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamLA$gam, toPredict, se.fit=TRUE))))
 
 # access residuals
-CA_res <- data.frame(covid19_CA_diff$confirmed - forecast$fit)
+LA_res <- data.frame(covid19_LA_diff$confirmed - forecast$fit)
 
 # transform into time series
-CA_res$time = covid19_CA_diff$date
-colnames(CA_res)[1] = "residuals"
+LA_res$time = covid19_LA_diff$date
+colnames(LA_res)[1] = "residuals"
 
 col_order <- c("time", "residuals")
-CA_res <- CA_res[, col_order]
+LA_res <- LA_res[, col_order]
 
-CA_res_ts <- ts_xts(CA_res)
+LA_res_ts <- ts_xts(LA_res)
 
-plot.xts(CA_res_ts)
+plot.xts(LA_res_ts)
 # adf test
-adf.test(as.ts(CA_res_ts))
+adf.test(as.ts(LA_res_ts))
 ```
 
 ```{r top 5 crime VAR}
 # specify common time range
 # start from when covid was a thing
 # end with crime since it is manually updated
-common_time <- seq.Date(start(CA_res_ts), end(top5crime_diff), by = "day")
+common_time <- seq.Date(start(LA_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
 combined_diff <- merge(top5crime_diff[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")],
-                       CA_res_ts[paste(common_time[1],
+                       LA_res_ts[paste(common_time[1],
                                             common_time[length(common_time)],
                                             sep = "/")])
 
@@ -200,71 +278,63 @@ optimal_burglary_vehicle <- VARselect(na.omit(combined_diff)[,c(3,6)], type = 'n
 optimal_vandalism <- VARselect(na.omit(combined_diff)[,c(4,6)], type = 'none', lag.max = 10)
 optimal_vehicle <- VARselect(na.omit(combined_diff)[,c(5,6)], type = 'none', lag.max = 10)
 
-VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=optimal_battery$selection[1])
+VAR_battery <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]),
+                   p=optimal_battery$selection[1])
 VAR_burglary <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]),
                     p=optimal_burglary$selection[1])
 VAR_burglary_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]),
-                            p=optimal_burglary_vehicle$selection[1])
+                    p=optimal_burglary_vehicle$selection[1])
 VAR_vandalism <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]),
-                     p=optimal_vandalism$selection[1])
-VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_vehicle$selection[1])
+                    p=optimal_vandalism$selection[1])
+VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
+                   p=optimal_vehicle$selection[1])
 ```
 
 ### Step 6: Granger Causality test
-
+#### BATTERY
 ```{r granger offense}
 causality(VAR_battery, cause = colnames(combined_diff)[1])
 causality(VAR_battery, cause = "residuals")
 ```
+Battery weakly significant to covid.
 
+#### BURGLARY
 ```{r}
 causality(VAR_burglary, cause = colnames(combined_diff)[2])
 causality(VAR_burglary, cause = "residuals")
 ```
+Burglary significant to covid.
 
+#### BURGLARY FROM VEHICLE
 ```{r}
 causality(VAR_burglary_vehicle, cause = colnames(combined_diff)[3])
 causality(VAR_burglary_vehicle, cause = "residuals")
 ```
-COVID-19 may help to predict burglary from vehicle (p-value = 0.04295).
+Nothing significant.
 
+#### VANDALISM
 ```{r}
 causality(VAR_vandalism, cause = colnames(combined_diff)[4])
 causality(VAR_vandalism, cause = "residuals")
 ```
-COVID-19 may help to predict vandalism (p-value = 0.02398)
+Nothing significant.
 
+#### STOLEN VEHICLE
 ```{r}
 causality(VAR_vehicle, cause = colnames(combined_diff)[5])
 causality(VAR_vehicle, cause = "residuals")
 ```
+Nothing significant.
+
 ### Step 7: Impulse Response Function
 
 burglary from vehicle and vandalism have granger causality.
 
 ```{r irf}
-par(mfrow = c(1,2))
-irf_burg_v_1 <- irf(VAR_burglary_vehicle, 
-                         impulse = "burglary.from.vehicle", 
-                         response = "residuals", 
-                         n.ahead = 24)
-irf_burg_v_2 <- irf(VAR_burglary_vehicle, 
-                         impulse = "residuals", 
-                         response = "burglary.from.vehicle", 
-                         n.ahead = 24)
-plot(irf_burg_v_1)
-plot(irf_burg_v_2)
+lags = c(1:25)
 
-irf_vandalism_1 <- irf(VAR_vandalism, 
-                         impulse = "vandalism", 
-                         response = "residuals", 
-                         n.ahead = 24)
-irf_vandalism_2 <- irf(VAR_vandalism, 
-                         impulse = "residuals", 
-                         response = "vandalism", 
-                         n.ahead = 24)
-plot(irf_vandalism_1)
-plot(irf_vandalism_2)
+par(mfrow = c(1,2))
+
 ```
 ### CONCLUSION (Last update: MAY 30)
 Significant contribution on prediction:
@@ -272,6 +342,3 @@ Significant contribution on prediction:
 
 Significant simultaneous movement:
 	Not found
-
-  
-==================================
