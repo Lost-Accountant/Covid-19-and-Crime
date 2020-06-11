@@ -14,6 +14,7 @@ library(COVID19) # to get data about covid 19
 library(aTSA) # adf.test
 library(forecast) #arima model
 library(vars) #VAR and Causality
+library(plotly)
 ```
 
 This document is to study the possible relationship between COVID-19 and frequency of crime committed in the city of Boston.
@@ -194,22 +195,26 @@ boston %>%
 
 # daily
 # 2020 only
-boston %>%
+daily <- boston %>%
   dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
   filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
   count(date, OFFENSE_DESCRIPTION) %>%
   na.omit() %>%
   ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
   geom_line() +
-  facet_wrap(~OFFENSE_DESCRIPTION) +
+  facet_free(~OFFENSE_DESCRIPTION, space = "free") +
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(boston_summary$OFFENSE_DESCRIPTION[1:5]))) +
-  ggtitle("Frequency of top 5 crime in Boston in 2020 (Jan to June)")
+  theme(legend.title = element_blank()) +
+  ylab("Cases") +
+  theme(legend.position = "none")
+
+ggplotly(daily)
 
 # bunch of crime seem to be affected by BLM protests
 
 # year to year comparison
 # exclude 2020-06 due to incomplete info
-boston %>%
+yty <- boston %>%
   dplyr::select(MONTH, y_month, OFFENSE_DESCRIPTION, YEAR) %>%
   filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),
          y_month != "2020-06") %>%
@@ -217,9 +222,13 @@ boston %>%
   na.omit() %>%
   ggplot(aes(x=MONTH, y=n, group = YEAR, color = YEAR)) +
   geom_line() +
-  facet_wrap(~OFFENSE_DESCRIPTION) +
-  ggtitle("year to year comparison of the top 5 crime in Boston in the past 5 years")
+  facet_free(~OFFENSE_DESCRIPTION, scales = "free") +
+  ylab("Cases") +
+  guides(color = guide_legend(reverse = TRUE)) +
+  theme(legend.title = element_blank())
   
+ggplotly(yty) %>%
+  layout(legend=list(traceorder='reversed'))
 ```
 
 Many plots in different style about the top 5 most frequent crime in Boston.
@@ -373,7 +382,7 @@ irf_vandalism_1_gg <- data.frame(irf_vandalism_1$irf$vandalism[,1],
 
 colnames(irf_vandalism_1_gg) <- c("mean", "lower", "upper")
 
-ggplot(irf_vandalism_1_gg, aes(x = lags)) +
+i1 <- ggplot(irf_vandalism_1_gg, aes(x = lags)) +
   geom_line(aes(y = mean), color = "black") +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
@@ -383,6 +392,7 @@ ggplot(irf_vandalism_1_gg, aes(x = lags)) +
   xlab("Number of days after a vandalism")+
   ylab("Number of new covid 19 cases")
 
+ggplotly(i1)
 
 # verbal dispute
 # from covid
@@ -399,14 +409,17 @@ irf_dispute_2_gg <- data.frame(irf_dispute_2$irf$residuals[,1],
 
 colnames(irf_dispute_2_gg) <- c("mean", "lower", "upper")
 
-ggplot(irf_dispute_2_gg, aes(x=lags)) +
+i2 <- ggplot(irf_dispute_2_gg, aes(x=lags)) +
   geom_line(aes(y = mean), color = "black") +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
   ggtitle("How many more verbal dispute cases per day there will be 
           after 1 confirmed covid19 case") +
   xlab("Number of days after a confimed covid 19 case")+
   ylab("Number of verbal dispute cases")
+
+ggplotly(i2)
 ```
 
 ### Step 8: Forecast
