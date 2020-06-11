@@ -102,7 +102,9 @@ chicago %>%
 # exclude June 2020 due to incomplete data
 chicago %>%
   dplyr::select(month, primary_type, year, y_month) %>%
-  filter(primary_type %in% chicago_summary$primary_type[1:5], year == 2020, y_month != "2020-06") %>% 
+  filter(primary_type %in% chicago_summary$primary_type[1:5] | primary_type == "MOTOR VEHICLE THEFT", 
+         year == 2020, y_month != "2020-06"
+         ) %>% 
   count(month, primary_type) %>%
   na.omit() %>%
   ggplot(aes(month, n, group = primary_type, color = primary_type)) +
@@ -116,12 +118,13 @@ chicago %>%
 # 2020 only
 chicago %>%
   dplyr::select(Date, primary_type, year) %>%
-  filter(primary_type %in% chicago_summary$primary_type[1:5], year == 2020) %>%
+  filter(primary_type %in% chicago_summary$primary_type[1:5] | primary_type == "MOTOR VEHICLE THEFT", 
+         year == 2020) %>%
   count(Date, primary_type) %>%
   na.omit() %>%
   ggplot(aes(Date, n, group = primary_type, color = primary_type)) +
   geom_line() +
-  facet_wrap(~primary_type) +
+  facet_wrap(~primary_type, scale = "free") +
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(chicago_summary$primary_type[1:5]))) +
   ggtitle("Frequency of top 5 crime in Chicago in 2020 (Jan to June)")
 
@@ -131,13 +134,14 @@ chicago %>%
 # exclude 2020-06 due to incomplete info
 chicago %>%
   dplyr::select(y_month, month, primary_type, year) %>%
-  filter(primary_type %in% chicago_summary$primary_type[1:5],
+  filter(primary_type %in% chicago_summary$primary_type[1:5] | primary_type == "MOTOR VEHICLE THEFT",
          y_month != "2020-06") %>%
   count(year, month, primary_type) %>%
   na.omit() %>%
   ggplot(aes(x=month, y=n, group = year, color = year)) +
   geom_line() +
-  facet_wrap(~primary_type) +
+  facet_wrap(~primary_type, scale = "free") +
+  guides(color = guide_legend(reverse = TRUE)) +
   ggtitle("year to year comparison of the top 5 crime in Chicago in the past 6 years")
 ```
 
