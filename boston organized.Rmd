@@ -475,7 +475,8 @@ forecast_dispute$forecast$dispute %>%
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
   dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
 
 # other crime, not significant
 # investigate eprson
@@ -496,7 +497,8 @@ forecast_investigate$forecast$investigate %>%
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
   dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
 
 # property damage
 forecast_damage <- forecast(VAR_damage)
@@ -516,7 +518,8 @@ forecast_damage$forecast$property.damage %>%
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
   dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
 
 # medical attention
 forecast_medical <- forecast(VAR_medical)
@@ -536,7 +539,8 @@ forecast_medical$forecast$medical %>%
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
   dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
 
 # vandalism
 forecast_vandalism$forecast$vandalism %>%
@@ -554,7 +558,8 @@ forecast_vandalism$forecast$vandalism %>%
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
   dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
 
 #### OPTIONAL
 accu_compare <- data.frame(rbind(accuracy(VAR_dispute$varresult[[1]]),
