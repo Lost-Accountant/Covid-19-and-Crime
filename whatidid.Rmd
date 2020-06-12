@@ -11,7 +11,8 @@ library(COVID19) # to get data about covid 19
 library(forecast) #arima model
 library(vars) #VAR and Causality
 library(aTSA) # adf.test
-
+library(dygraphs)
+library(plotly)
 ```
 
 # Philadelphia
@@ -32,10 +33,6 @@ phil2015 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_
 ```{r attach datasets together}
 
 phil <- do.call("rbind", list(phil2020, phil2019, phil2018, phil2017, phil2016, phil2015))
-
-#phil <- read.csv('/Users/chelseahuang/Desktop/data/phil_crime/phil_crime.csv')
-#phil <- read.csv('C:/Users/sshan/Desktop/phillydata/phillydata.csv')
-
 ```
 
 ```{r date mutate}
