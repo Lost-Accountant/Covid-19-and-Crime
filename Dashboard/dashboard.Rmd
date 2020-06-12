@@ -1437,7 +1437,9 @@ Los Angeles
 
 Atlanta
 =======================================================================
-### Impulse response function (burglary)
+
+Row{data-height=300}
+-------------------------------------
 ```{r get the data for atlanta}
 url1 <- 'https://www.atlantapd.org/Home/ShowDocument?id=3279'
 temp <- tempfile()
@@ -1456,7 +1458,7 @@ unlink(temp)
 ```{r}
 zip_data2 <- zip_data2 %>%
   filter(substr(Occur.Date, start = 1, stop = 4) >= '2014')
-
+# change the date format
 library(lubridate)
 zip_data1$occur_date <- format(as.Date(zip_data1$occur_date, "%m/%d/%Y"), '%Y-%m-%d')
 
@@ -1476,6 +1478,7 @@ atlanta <- merge(zip_data1,zip_data2, all = T)
 
 # add date
 atlanta <- atlanta %>%
+  mutate(date = as.Date(substr(Occur.Date, start = 1, stop = 10))) %>%
   mutate(y_month  = substr(Occur.Date, start = 1, stop = 7)) %>%
   mutate(YEAR  = substr(Occur.Date, start = 1, stop = 4)) %>%
   mutate(MONTH = substr(Occur.Date, start = 6, stop = 7))
@@ -1483,15 +1486,15 @@ atlanta <- atlanta %>%
 # summary of all crime
 atlanta_summary <- atlanta %>%
   group_by(UCR.Literal) %>%
-  summarise(number_of_crime = n()) %>%
+  dplyr::summarise(number_of_crime = dplyr::n()) %>%
   arrange(desc(number_of_crime))
 ```
 
-```{r extract atlanta crime}
+```{r extract atlanta crime, echo=F}
 # extract all crimes
 top5crime <- atlanta %>%
   filter(UCR.Literal %in% head(atlanta_summary$UCR.Literal, 5)) %>%
-  group_by(Occur.Date, UCR.Literal) %>%
+  group_by(date, UCR.Literal) %>%
   tally() %>%
   spread(UCR.Literal, n)
 
@@ -1517,7 +1520,7 @@ for (i in (3:ncol(top5crime))){
 top5crime_diff <- na.omit(diff(top5crime_xts))
 ```
 
-```{r top 5 crime VAR}
+```{r top 5 crime VAR, message=F, warning=F}
 # extract for tranforming into time series data
 ts_AT <- covid19_AT %>% 
   dplyr::select(date, confirmed) %>%
@@ -1567,7 +1570,7 @@ AT_res <- AT_res[, col_order]
 AT_res_ts <- ts_xts(AT_res)
 ```
 
-```{r}
+```{r specify common time range}
 common_time <- seq.Date(start(AT_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
@@ -1599,7 +1602,8 @@ VAR_robbery <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
                               p=optimal_robbery$selection[1])
 ```
 
-```{r atlanta irf}
+### Impulse response function (burglary)
+```{r atlanta irf burglary }
 lags = c(1:25)
 
 # only covid significant to burglary
@@ -1620,8 +1624,8 @@ irf_burglary_1_plot <- ggplot(irf_burglary_1_gg, aes(x=lags)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
   ggtitle("How many more burglary cases per day there will be 
-          after 1 confirmed covid19 case") +
-  xlab("Number of days after a confimed covid 19 case")+
+          after 1 confirmed COVID-19 case") +
+  xlab("Number of days after a confimed COVID-19 case")+
   ylab("Number of bulglary cases")
 
 ggplotly(irf_burglary_1_plot)
@@ -1629,7 +1633,23 @@ ggplotly(irf_burglary_1_plot)
 
 Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
-   
+### Atlanta Crime Daily Summary
+```{r atlanta daily freq}
+# daily
+# 2020 only
+atlanta_daily <- atlanta %>%
+  dplyr::select(date, UCR.Literal, YEAR) %>%
+  filter(UCR.Literal %in% atlanta_summary$UCR.Literal[1:5], YEAR=='2020') %>%
+  dplyr::count(date, UCR.Literal) %>%
+  ggplot(aes(date, n, group = UCR.Literal, color = UCR.Literal)) +
+  geom_line() +
+  facet_wrap(~UCR.Literal) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(atlanta_summary$UCR.Literal[1:5]))) +
+  ylab('Cases') +
+  theme(legend.position = 'none')
+ggplotly(atlanta_daily)
+```
+
 ### Atlanta Crime Summary
 
 ```{r}
@@ -1637,15 +1657,15 @@ Row {data-height=400 .tabset .tabset-fade }
 plt <- atlanta %>%
   dplyr::select(y_month, MONTH, UCR.Literal, YEAR) %>%
   filter(UCR.Literal %in% atlanta_summary$UCR.Literal[1:5], y_month != "2020-06") %>%
-  count(YEAR, MONTH, UCR.Literal) %>%
+  dplyr::count(YEAR, MONTH, UCR.Literal) %>%
   na.omit() %>%
   ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
   geom_line() +
-  facet_wrap(~UCR.Literal,nrow = 1) +
+  facet_free(~UCR.Literal,scales = 'free') +
   guides(color = guide_legend(reverse = TRUE)) +
   xlab('Month') +
   ylab('Cases') +
-  labs(col='Year')
+  theme(legend.title = element_blank())
 
 ggplotly(plt) %>%
   layout(legend=list(traceorder='reversed'))
@@ -1664,7 +1684,7 @@ interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
 }"
 ```
 
-```{r}
+```{r atlanta burglary VAR}
 f_burglary <- forecast::forecast(VAR_burglary)
 f_burglary$forecast$burglary %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
@@ -1686,7 +1706,7 @@ f_burglary$forecast$burglary %>%
 
 ### VAR Forecast for assault
 
-```{r}
+```{r atlanta assault VAR}
 f_assault <- forecast::forecast(VAR_assault)
 f_assault$forecast$assault %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
@@ -1707,7 +1727,7 @@ f_assault$forecast$assault %>%
 ```
 
 ### VAR Forecast for auto theft
-```{r}
+```{r atlanta auto theft VAR}
 f_autotheft <- forecast::forecast(VAR_autotheft)
 f_autotheft$forecast$autotheft %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
@@ -1728,7 +1748,7 @@ f_autotheft$forecast$autotheft %>%
 ```
 
 ### VAR Forecast for larceny
-```{r}
+```{r atlanta larceny VAR}
 f_larceny <- forecast::forecast(VAR_larceny)
 f_larceny$forecast$larceny %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
@@ -1749,7 +1769,7 @@ f_larceny$forecast$larceny %>%
 ```
 
 ### VAR Forecast for robbery
-```{r}
+```{r atlanta robbery VAR}
 f_robbery <- forecast::forecast(VAR_robbery)
 f_robbery$forecast$robbery %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
@@ -1768,6 +1788,24 @@ f_robbery$forecast$robbery %>%
   dyLegend(show = 'follow') %>%
   dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
+
+### Daily confirmed cases of COVID-19 in Atlanta
+```{r massachusetts daily covid case}
+dygraph(ts_diff_AT) %>%
+  dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red") %>%
+  dySeries("5ac05a7e", label = "Atlanta") %>%
+  dyLegend(show = "always", hideOnMouseOut = FALSE)
+```
+
+### Summary
+
+This is text [link](http://www.example.com)
+
+- one
+- two 
+- three
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
 
 
