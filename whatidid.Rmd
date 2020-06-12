@@ -8,9 +8,9 @@ library(tidyverse)
 library(tsbox) # transform data into time series
 library(xts)
 library(COVID19) # to get data about covid 19
-library(forecast) #arima model
 library(vars) #VAR and Causality
 library(aTSA) # adf.test
+library(forecast) #arima model
 library(dygraphs)
 library(plotly)
 ```
@@ -116,8 +116,26 @@ phil %>%
 ```
 
 ```{r year to year comparison of crime in Philadelphia}
-#year to year comparison of top 5 crimes since 2015
+# daily frequency of top 5 crime in 2020
+daily <- phil %>%
+  dplyr::select(dispatch_date, text_general_code, YEAR) %>%
+  filter(text_general_code %in% phil_summary$text_general_code[1:5],
+         YEAR == 2020) %>%
+  count(dispatch_date, text_general_code) %>%
+  na.omit() %>%
+  ggplot(aes(x=dispatch_date, y=n, group = text_general_code, color = text_general_code)) +
+  geom_line() + 
+  facet_free(~text_general_code) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(phil_summary$text_general_code[1:5]))) +
+  ggtitle("Daily requency of top 5 crime in Philadelphia in 2020") +
+  theme(legend.position = "none")
 
+ggplotly(daily)
+ 
+
+
+#year to year comparison of top 5 crimes since 2015
+# exclude 2020-06
 plt <- phil %>%
   dplyr::select(MONTH, dispatch_date, text_general_code, YEAR, y_month) %>%
   filter(text_general_code %in% phil_summary$text_general_code[1:5], y_month != "2020-06") %>%
@@ -165,11 +183,12 @@ for (i in (3:ncol(top5crime))){
 top5crime_diff <- na.omit(diff(top5crime_xts))
 ```
 ### Step 2: Construct combined time series
-## COVID 19 RELATED
+#### COVID 19 RELATED
 ```{r covid 19 extract Pennsylvania data}
 # extract Pennsylvania data from US data. 
-covid19_PA <- covid19("USA", level = 2) %>%
-  filter(administrative_area_level_2 == "Pennsylvania") %>%
+covid19_PA <- covid19("USA", level = 3) %>%
+  filter(administrative_area_level_2 == "Pennsylvania",
+         administrative_area_level_3 == "Philadelphia") %>%
   # filter out days when confirmed is zero
   filter(confirmed > 0)
 
@@ -212,19 +231,37 @@ covid19_PA_diff$timeIid = covid19_PA_diff$timeInt
 
 # GAMM model
 # 50 too overfit. 15 looks decent
-gamPA <- gamm4::gamm4(confirmed ~  s(timeInt, k=50), random = ~(1|timeIid), 
+gamPA <- gamm4::gamm4(confirmed ~  s(timeInt, k=90), random = ~(1|timeIid), 
 	data=covid19_PA_diff, family=poisson(link='log'))
 
 lme4::VarCorr(gamPA$mer)
 # looks like random intercept is making little difference.
 # choose to not have random effect to preserve it for time series analysis
+```
 
+```{r plot GAMM}
 # plot fitted value
 toPredict = data.frame(time = seq(covid19_PA_diff$date[1], 
                                           covid19_PA_diff$date[length(covid19_PA_diff$date)],
                                   by = '1 day'))
 toPredict$timeInt = as.numeric(toPredict$time)
 
+# plot
+
+matplot(toPredict$time, 
+        exp(do.call(cbind, mgcv::predict.gam(gamPA$gam, toPredict, se.fit=TRUE)) %*% 
+              Pmisc::ciMat()), 
+        col='red', lty=c(1,2,2), type='l', xaxt='n', xlab='', ylab='Daliy Confirmed cases', 
+        ylim = c(0.5, 800), xlim = as.Date(c(covid19_PA$date[1], covid19_PA$date[length(covid19_PA$date)])))
+title("Daily confirmed cases of COVID 19 in Boston")
+
+matpoints(toPredict$time, covid19_PA_diff$confirmed, 
+          col = 'black',
+          type = 'l')
+
+```
+##### Obtain residuals
+```{r covid 19 residuals}
 # obtain forecast
 forecast <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamPA$gam, toPredict, se.fit=TRUE))))
 
@@ -288,175 +325,113 @@ VAR_offense <- VAR(y=as.ts(na.omit(combined_diff)[,c(1,6)]), p=optimal_offense$s
 VAR_assault <- VAR(y=as.ts(na.omit(combined_diff)[,c(2,6)]), p=optimal_assault$selection[1])
 VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(3,6)]), p=optimal_vehicle$selection[1])
 VAR_thefts <- VAR(y=as.ts(na.omit(combined_diff)[,c(4,6)]), p=optimal_thefts$selection[1])
-VAR_vandalism <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
-                     p=optimal_vandalism$selection[1])
+VAR_vandalism <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]), p=optimal_vandalism$selection[1])
 ```
 
 ### Step 6: Granger Causality test
-
+#### OFFENSE
 ```{r granger offense}
 # offense
 causality(VAR_offense, cause = colnames(combined_diff)[1])
 causality(VAR_offense, cause = "residuals")
 ```
-instantaneous causality between: offense and residuals (p-value = 0.04408)
+Offense significant to covid (0.03)
 
+#### ASSAULT
 ```{r granger assault}
 causality(VAR_assault, cause = colnames(combined_diff)[2])
 causality(VAR_assault, cause = "residuals")
-
-# diagnostic testing
-serial.test(VAR_assault) # no autocorrelation in errors
-arch.test(VAR_assault)
-normality.test(VAR_assault) # not normal
 ```
+Nothing significant
 
+#### THEFT FROM VEHICLE
 ```{r granger vehicle}
 causality(VAR_vehicle, cause = colnames(combined_diff)[3])
 causality(VAR_vehicle, cause = "residuals")
 
-# diagnostic testing
-serial.test(VAR_vehicle) # autocorrelation in errors
-arch.test(VAR_vehicle)
-normality.test(VAR_vehicle)
 ```
-COVID-19 may help to predict thefts from vehicle.(p-value = 0.0625)
-Instantaneous causality appears when we include the current information of variables (p-value = 0.02328)
+Nothing significant.
 
+#### THEFT
 ```{r granger thefts}
 causality(VAR_thefts, cause = colnames(combined_diff)[4])
 causality(VAR_thefts, cause = "residuals")
 ```
-slightly signifigant instantenous causality between thefts and COVID-19 (0.07509)
+Theft significant to covid. (0.04)
 
+#### VANDALISM
 ```{r granger vandalism}
 causality(VAR_vandalism, cause = colnames(combined_diff)[5])
 causality(VAR_vandalism, cause = "residuals")
 ```
-instantaneous causality between: vandalism and residuals (p-value = 0.03222)
+Nothing significant.
 
 
 ### Step 7: Impulse Response Function
 
-Only thefts from vehicle may have granger causality.
+Offense significant to covid.
+theft significant to covid
 
-```{r irf graphs, theft from vehicle, theft, vandalism}
-### code to produce the irf graphs in ggplot and ggplotly
-### theft from vehicle irf graph
-
-par(mfrow = c(1,2))
+```{r irf graphs}
 lags = c(1:25)
-# theft from vehicle
-irf_vehicle_1 <- irf(VAR_vehicle, 
-                         impulse = "vehicle", 
-                         response = "residuals", 
-                         n.ahead = 24)
-irf_vehicle_2 <- irf(VAR_vehicle, 
-                         impulse = "residuals", 
-                         response = "vehicle", 
-                         n.ahead = 24)
-#plot(irf_vehicle_1)
-#plot(irf_vehicle_2)
-
-###  ggplot version of irf graph of theft from vehicle
-
-irf_vehicle_2_gg <- data.frame(
-  irf_vehicle_2$irf$residuals[,1],
-  irf_vehicle_2$Lower$residuals[,1],
-  irf_vehicle_2$Upper$residuals[,1])
-
-colnames(irf_vehicle_2_gg) <- c("mean", "lower", "upper")
-
-irf_vehicle_2_ggly <-  ggplot(irf_vehicle_2_gg, aes(x = lags)) +
-  geom_line(aes(y = mean), color = "black") +
-  geom_hline(yintercept = 0, color = "blue") +
-  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
-  theme_classic() +
-  ggtitle("Increase in incidents of theft from vehicle per day after 1 confirmed covid19 case") +
-  xlab("Number of days after 1 covid19 case") +
-  ylab("Number of thefts from vehicle per day")
-
-irf_vehicle_2_ggly
-
-######### irf graph of theft
-###weak signifigance for instantenous causality
-
 par(mfrow = c(1,2))
-lags = c(1:25)
-# theft from vehicle
-irf_theft_1 <- irf(VAR_thefts, 
-                         impulse = "thefts", 
-                         response = "residuals", 
-                         n.ahead = 24)
-irf_theft_2 <- irf(VAR_thefts, 
-                         impulse = "residuals", 
-                         response = "thefts", 
-                         n.ahead = 24)
 
-###  ggplot version of irf graph of theft
-#irf_theft_2, impulse = residuals (COVID), response = theft
-irf_theft_2_gg <- data.frame(
-  irf_theft_2$irf$residuals[,1],
-  irf_theft_2$Lower$residuals[,1],
-  irf_theft_2$Upper$residuals[,1])
+# general offense
+# irf
+irf_offense_1 <- irf(VAR_offense,
+                     impulse = "offense",
+                     response = "residuals",
+                     n.ahead = 24)
+# ggplot
+irf_offense_1_gg <- data.frame(
+  irf_offense_1$irf$offense[,1],
+  irf_offense_1$Lower$offense[,1],
+  irf_offense_1$Upper$offense[,1]
+  )
 
-colnames(irf_theft_2_gg) <- c("mean", "lower", "upper")
+colnames(irf_offense_1_gg) <- c("mean", "lower", "upper")
 
-irf_theft_2_ggly <-  ggplot(irf_theft_2_gg, aes(x = lags)) +
+irf_offense_1_plot <- ggplot(irf_offense_1_gg, aes(x=lags)) +
   geom_line(aes(y = mean), color = "black") +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("Increase in confirmed COVID19 cases after theft") +
-  xlab("Number of days after 1 covid19 case") +
-  ylab("Number of thefts per day")
+  ggtitle("How many more daily covid19 cases there will be 
+          after 1 general offense") +
+  xlab("Number of days after a general offense")+
+  ylab("Number of new covid 19 cases")
 
-irf_theft_2_ggly
+# html
+ggplotly(irf_offense_1_plot)
 
-######irf_theft_1, impulse = theft, response = residuals (COVID)
-#irf_theft_1_gg <- data.frame(
-  #irf_theft_1$irf$theft[,1],
-  #irf_theft_1$Lower$theft[,1],
-  #irf_theft_1$Upper$theft[,1])
+# theft
+# irf
+irf_theft_1 <- irf(VAR_thefts,
+                   impulse = "thefts",
+                   response = "residuals",
+                   n.ahead = 24)
 
-#colnames(irf_theft_1_gg) <- c("mean", "lower", "upper")
+# ggplot
+irf_theft_1_gg <- data.frame(
+  irf_theft_1$irf$thefts[,1],
+  irf_theft_1$Lower$thefts[,1],
+  irf_theft_1$Upper$thefts[,1]
+)
 
-#irf_theft_1_ggly <-  ggplot(irf_theft_1_gg, aes(x = lags)) +
-  #geom_line(aes(y = mean), color = "black") +
-  #geom_hline(yintercept = 0, color = "blue") +
-  #geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
-  #theme_classic() +
-  #ggtitle("Increase in incidents of thefts per day after 1 confirmed covid19 case") +
-  #xlab("Number of days after 1 incident of theft") +
-  #ylab("Number of confirmed cases per day")
+colnames(irf_theft_1_gg) <- c("mean", "lower", "upper")
 
-#irf_theft_1_ggly
-########
-
-### Vandalism
-irf_vandalism_1 <- irf(VAR_vandalism, 
-                         impulse = "vandalism", 
-                         response = "residuals", 
-                         n.ahead = 24)
-irf_vandalism_2 <- irf(VAR_vandalism, 
-                         impulse = "residuals", 
-                         response = "vandalism", 
-                         n.ahead = 24)
-irf_vandalism_2_gg <- data.frame(
-  irf_vandalism_1$irf$vandalism[,1],
-  irf_vandalism_1$Lower$vandalism[,1],
-  irf_vandalism_1$Upper$vandalism[,1])
-irf_vandalism_2_ggly <-  ggplot(irf_vandalism_1_gg, aes(x = lags)) +
+irf_theft_1_plot <- ggplot(irf_theft_1_gg, aes(x=lags)) +
   geom_line(aes(y = mean), color = "black") +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("Increase in incidents of vandalism per day after 1 confirmed covid19 case") +
-  xlab("Number of days after 1 incident of vandalism") +
-  ylab("Number of confirmed cases per day")
+  ggtitle("How many more daily covid19 cases there will be 
+          after 1 theft") +
+  xlab("Number of days after a theft")+
+  ylab("Number of new covid 19 cases")
 
-irf_vandalism_2_ggly
-
+# html
+ggplotly(irf_theft_1_plot)
 ```
 
 ### Step 8: Forecast
@@ -472,7 +447,6 @@ forecast_vandalism <- forecast(VAR_vandalism) #forecast for vandalism           
 #the other VAR models with no signifigance to covid
 forecast_assault <- forecast(VAR_assault)     #forecast for all assaults
 forecast_offense <- forecast(VAR_offense)     #forecast for all other offenses
-
 
 ###forecast for theft
 autoplot(forecast_theft$forecast$thefts) +
