@@ -126,7 +126,7 @@ Row{data-height=300}
    
 
 ### Impulse response function (criminal damage)
-```{r get the data for boston}
+```{r get the data for chiacgo}
 if (exists("chicago")) is.data.frame(get("chicago")) else chicago <- RSocrata::read.socrata(
   "https://data.cityofchicago.org/resource/ijzp-q8t2.csv?$where=year >= 2014",
   app_token = "hPU78MH7zKApdpUv4OVCInPOQ")
@@ -594,8 +594,7 @@ Row{data-height=300}
 -------------------------------------
 ```{r get data for boston, echo=FALSE}
 #### Boston data ####
-boston <- read.csv("https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmpqy9o_jgd.csv")
-head(boston)
+if (exists("boston")) is.data.frame(get("boston")) else boston <- read.csv("https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmpqy9o_jgd.csv")
 
 # add date
 boston <- boston %>%
@@ -753,6 +752,7 @@ irf_vandalism_1_plot <- ggplot(irf_vandalism_1_gg, aes(x = lags)) +
 # html version
 ggplotly(irf_vandalism_1_plot)
 ```
+
 ### Impulse response function (Verbal dispute)
 ```{r irf boston verbal dispute}
 # verbal dispute
