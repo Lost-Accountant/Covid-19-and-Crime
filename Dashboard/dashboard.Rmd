@@ -598,7 +598,7 @@ if (exists("boston")) is.data.frame(get("boston")) else boston <- read.csv("http
 
 # add date
 boston <- boston %>%
-  mutate(date = substr(OCCURRED_ON_DATE, start = 1, stop = 10)) %>%
+  mutate(date = as.Date(substr(OCCURRED_ON_DATE, start = 1, stop = 10))) %>%
   mutate(y_month = substr(OCCURRED_ON_DATE, start = 1, stop = 7)) %>%
   mutate(MONTH = substr(date, start = 6, stop = 7))
 

@@ -155,7 +155,7 @@ head(boston)
 
 # add date
 boston <- boston %>%
-  mutate(date = substr(OCCURRED_ON_DATE, start = 1, stop = 10)) %>%
+  mutate(date = as.Date(substr(OCCURRED_ON_DATE, start = 1, stop = 10))) %>%
   mutate(y_month = substr(OCCURRED_ON_DATE, start = 1, stop = 7))
 
 ```
@@ -198,7 +198,8 @@ boston %>%
 # 2020 only
 daily <- boston %>%
   dplyr::select(date, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5)) %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),
+         YEAR == 2020) %>%
   count(date, OFFENSE_DESCRIPTION) %>%
   na.omit() %>%
   ggplot(aes(date, n, group = OFFENSE_DESCRIPTION, color = OFFENSE_DESCRIPTION)) +
