@@ -328,17 +328,190 @@ Nothing significant.
 
 ### Step 7: Impulse Response Function
 
-burglary from vehicle and vandalism have granger causality.
+Battery (weakly) and Burglary significant to covid
 
 ```{r irf}
 lags = c(1:25)
 
 par(mfrow = c(1,2))
+# battery
+# criem significant to covid
+irf_battery_1 <- irf(VAR_battery,
+                     impulse = "battery",
+                     response = "residuals",
+                     n.ahead = 24)
 
+# html plot for battery
+irf_battery_1_gg <- data.frame(
+  irf_battery_1$irf$battery[,1],
+  irf_battery_1$Lower$battery[,1],
+  irf_battery_1$Upper$battery[,1]
+)
+
+colnames(irf_battery_1_gg) <- c("mean", "lower", "upper")
+
+irf_battery_1_plot <- ggplot(irf_battery_1_gg, aes(x=lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more daily covid19 cases there will be 
+          after 1 battery case") +
+  xlab("Number of days after a battery case")+
+  ylab("Number of new covid 19 cases")
+
+ggplotly(irf_battery_1_plot)
+
+# burglary
+# crime significant to covid
+irf_burglary_1 <- irf(VAR_burglary,
+                      impulse = "burglary",
+                      response = "residuals",
+                      n.ahead = 24)
+
+irf_burglary_1_gg <- data.frame(
+  irf_burglary_1$irf$burglary[,1],
+  irf_burglary_1$Lower$burglary[,1],
+  irf_burglary_1$Upper$burglary[,1]
+)
+
+colnames(irf_burglary_1_gg) <- c("mean", "lower", "upper")
+
+irf_burglary_1_plot <- ggplot(irf_burglary_1_gg, aes(x=lags)) +
+  geom_line(aes(y = mean), color = "black") +
+  geom_hline(yintercept = 0, color = "blue") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
+  theme_classic() +
+  ggtitle("How many more daily covid19 cases there will be 
+          after 1 burglary case") +
+  xlab("Number of days after a burglary case")+
+  ylab("Number of new covid 19 cases")
+
+ggplotly(irf_burglary_1_plot)
 ```
-### CONCLUSION (Last update: MAY 30)
-Significant contribution on prediction:
- burglary from vehicle (p-value = 0.04295), vandalism (p-value = 0.02398)
 
-Significant simultaneous movement:
-	Not found
+### Step 8: Forecast
+```{r custom function}
+interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
+  value = g.getValue(row, col);
+  if(value[0] != value[2]) {
+    lower = Dygraph.numberValueFormatter(value[0], opts);
+    upper = Dygraph.numberValueFormatter(value[2], opts);
+    return '[' + lower + ', ' + upper + ']';
+  } else {
+    return Dygraph.numberValueFormatter(num, opts);
+  }
+}"
+```
+
+```{r var forecast}
+# battery
+# covid not significant to crime
+forecast_battery <- forecast(VAR_battery)
+
+forecast_battery$forecast$battery %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in battery cases in LA",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+
+# burglary
+# not significant to burglary
+forecast_burglary <- forecast(VAR_burglary)
+
+forecast_burglary$forecast$burglary %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in burglary cases in LA",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+
+# burglary from vehicle
+# not significant
+forecast_burglary_vehicle <- forecast(VAR_burglary_vehicle)
+
+forecast_burglary_vehicle$forecast$burglary.from.vehicle %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in burglary from vehicle cases in LA",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+
+# vandalism
+# not significant
+forecast_vandalism <- forecast(VAR_vandalism)
+
+forecast_vandalism$forecast$vandalism %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in vandalism cases in LA",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+
+# stolen vehicle
+# not significant
+forecast_stolen_vehicle <- forecast(VAR_vehicle)
+
+forecast_stolen_vehicle$forecast$vehicle %>%
+  {cbind(actuals = .$x, forecast_mean=.$mean,
+         lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
+         lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
+  dygraph(main = "Daily forecast for day-to-day change in stolen vehicle cases in LA",
+          ylab = "Day-to-day change") %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dySeries("actuals", color = "black") %>%
+  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries(c("lower_80", "forecast_mean", "upper_80"),
+           label = "80%", color = "blue") %>%
+  dySeries(c("lower_95", "forecast_mean", "upper_95"),
+           label = "95%", color = "blue")%>%
+  dyLegend(labelsSeparateLines=TRUE) %>%
+  dyRangeSelector() %>%
+  dyAxis("x", label = paste("Numebr of days since", common_time[1])) %>%
+  dyLegend(show = "follow")
+```
