@@ -115,6 +115,26 @@ phil %>%
 # This dataset doesn't have 'day of the week' yet.
 ```
 
+```{r year to year comparison of crime in Philadelphia}
+#year to year comparison of top 5 crimes since 2015
+
+plt <- phil %>%
+  dplyr::select(MONTH, dispatch_date, text_general_code, YEAR, y_month) %>%
+  filter(text_general_code %in% phil_summary$text_general_code[1:5], y_month != "2020-06") %>%
+  count(YEAR, MONTH, text_general_code) %>%
+  na.omit()%>% 
+  ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) + 
+  geom_line() + 
+  facet_wrap(~text_general_code, nrow = 1) +
+  guides(color = guide_legend(reverse = TRUE)) +
+  xlab('Month') +
+  ylab('Cases') +
+  labs(col='Year')
+
+ggplotly(plt) %>%
+  layout(legend=list(traceorder='reversed'))
+```
+
 ## VAR 
 ### Step1 : Extract cases
 ```{r extract cases}
