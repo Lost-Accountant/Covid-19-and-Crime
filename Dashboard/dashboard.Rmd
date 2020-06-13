@@ -1789,8 +1789,14 @@ f_robbery$forecast$robbery %>%
   dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
+
+Row {data-height=300} 
+-----------------------------------------------------------------------
+
+
+
 ### Daily confirmed cases of COVID-19 in Atlanta
-```{r massachusetts daily covid case}
+```{r atlanta daily covid case}
 dygraph(ts_diff_AT) %>%
   dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red") %>%
   dySeries("5ac05a7e", label = "Atlanta") %>%
