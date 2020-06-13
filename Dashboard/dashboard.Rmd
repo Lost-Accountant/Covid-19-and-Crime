@@ -1553,7 +1553,7 @@ ts_PA <- covid19_PA %>%
 # plot time series of PA infection
 ts_plot(ts_PA)
 # conduct ADF Test
-adf.test(as.ts(ts_PA))
+# adf.test(as.ts(ts_PA))
 # not stationary!
 
 # try first log difference
