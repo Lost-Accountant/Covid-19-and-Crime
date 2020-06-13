@@ -2087,7 +2087,7 @@ atlanta_daily <- atlanta %>%
   dplyr::count(date, UCR.Literal) %>%
   ggplot(aes(date, n, group = UCR.Literal, color = UCR.Literal)) +
   geom_line() +
-  facet_wrap(~UCR.Literal) +
+  facet_free(~UCR.Literal) +
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(atlanta_summary$UCR.Literal[1:5]))) +
   ylab('Cases') +
   theme(legend.position = 'none')
