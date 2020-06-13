@@ -2014,7 +2014,7 @@ AT_res <- AT_res[, col_order]
 AT_res_ts <- ts_xts(AT_res)
 ```
 
-```{r specify atlanta's common time range}
+```{r specify atlantas common time range}
 common_time <- seq.Date(start(AT_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
@@ -2363,7 +2363,7 @@ SEA_res <- SEA_res[, col_order]
 SEA_res_ts <- ts_xts(SEA_res)
 ```
 
-```{r specify seattle's common time range}
+```{r specify seattles common time range}
 # start from when covid was a thing
 # end with 1 day before today's date
 common_time <- seq.Date(start(SEA_res_ts), as.Date("2020-05-25") , by = "day")
