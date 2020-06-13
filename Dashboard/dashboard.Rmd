@@ -75,6 +75,15 @@ covid19_AT <- covid19("USA", level = 3) %>%
   # filter out days when confirmed is zero or one
   # becasue when it was 2 for a very long time
   filter(confirmed > 2)
+
+# Load Seattle Data
+covid19_SEA <- covid19("USA", level = 3) %>%
+  # this cook county contains chicago
+  filter(administrative_area_level_3 == "King",
+         administrative_area_level_2 == "Washington" ) %>%
+  # filter out days when confirmed is zero or one
+  # becasue when it was 1 for a very long time
+  filter(confirmed > 1)
 ```
 
 Overview {.storyboard}
