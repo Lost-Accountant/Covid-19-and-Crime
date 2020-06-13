@@ -1963,7 +1963,7 @@ for (i in (3:ncol(top5crime))){
 top5crime_diff <- na.omit(diff(top5crime_xts))
 ```
 
-```{r top 5 crime VAR, message=F, warning=F}
+```{r atlanta top 5 crime VAR, message=F, warning=F}
 # extract for tranforming into time series data
 ts_AT <- covid19_AT %>% 
   dplyr::select(date, confirmed) %>%
@@ -2013,7 +2013,7 @@ AT_res <- AT_res[, col_order]
 AT_res_ts <- ts_xts(AT_res)
 ```
 
-```{r specify common time range}
+```{r specify atlanta's common time range}
 common_time <- seq.Date(start(AT_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
@@ -2114,18 +2114,6 @@ ggplotly(plt) %>%
   layout(legend=list(traceorder='reversed'))
 ```
 ### VAR Forecast for burglary
-```{r custom function}
-interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
-  value = g.getValue(row, col);
-  if(value[0] != value[2]) {
-    lower = Dygraph.numberValueFormatter(value[0], opts);
-    upper = Dygraph.numberValueFormatter(value[2], opts);
-    return '[' + lower + ', ' + upper + ']';
-  } else {
-    return Dygraph.numberValueFormatter(num, opts);
-  }
-}"
-```
 
 ```{r atlanta burglary VAR}
 f_burglary <- forecast::forecast(VAR_burglary)
@@ -2245,7 +2233,7 @@ Row {data-height=300}
 
 ### Daily confirmed cases of COVID-19 in Atlanta
 ```{r atlanta daily covid case}
-dygraph(ts_diff_AT) %>%
+dygraph(adj_diff_AT) %>%
   dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red") %>%
   dySeries("5ac05a7e", label = "Atlanta") %>%
   dyLegend(show = "always", hideOnMouseOut = FALSE)
@@ -2297,7 +2285,7 @@ seattle_summary <- seattle %>%
   arrange(desc(number_of_crime))
 ```
 
-```{r extract cases, message=F, warning=F}
+```{r extract seattle cases, message=F, warning=F}
 # extract top 5 crime
 top5crime <- seattle %>%
   filter(offense %in% head(seattle_summary$offense, 5)) %>%
@@ -2325,7 +2313,7 @@ for (i in (3:ncol(top5crime))){
 top5crime_diff <- na.omit(diff(top5crime_xts))
 ```
 
-```{r top 5 crime VAR, message=FALSE, warning=F}
+```{r seattle top 5 crime VAR, message=FALSE, warning=F}
 # plot cumulative cases
 # extract for transforming into time series
 ts_SEA <- covid19_SEA %>%
@@ -2374,7 +2362,7 @@ SEA_res <- SEA_res[, col_order]
 SEA_res_ts <- ts_xts(SEA_res)
 ```
 
-```{r specify common time range}
+```{r specify seattle's common time range}
 # start from when covid was a thing
 # end with 1 day before today's date
 common_time <- seq.Date(start(SEA_res_ts), as.Date("2020-05-25") , by = "day")
@@ -2411,7 +2399,7 @@ VAR_theft_fromvehicle<- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
 ```
 
 ### Impulse response function (burglary)
-```{r irf}
+```{r seattle irf}
 lags = c(1:25)
 
 par(mfrow = c(1,2))
@@ -2460,7 +2448,7 @@ ggplotly(seattle_daily)
 ```
 
 ### Seattle Crime Summary
-```{r year to year comparison}
+```{r seattle year to year comparison}
 # exclude 2020-06
 yty <- seattle %>%
   dplyr::select(y_month, MONTH, offense, YEAR) %>%
@@ -2481,7 +2469,7 @@ ggplotly(yty) %>%
 ```
 ### VAR Forecast for burglary
 
-```{r}
+```{r seattle burglary VAR}
 forecast_burglary <- forecast(VAR_burglary)
 
 forecast_burglary$forecast$burglary %>%
@@ -2504,20 +2492,7 @@ forecast_burglary$forecast$burglary %>%
 ```
 
 ### VAR Forecast for larceny
-```{r custom function}
-interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
-  value = g.getValue(row, col);
-  if(value[0] != value[2]) {
-    lower = Dygraph.numberValueFormatter(value[0], opts);
-    upper = Dygraph.numberValueFormatter(value[2], opts);
-    return '[' + lower + ', ' + upper + ']';
-  } else {
-    return Dygraph.numberValueFormatter(num, opts);
-  }
-}"
-```
-
-```{r}
+```{r seattle larceny VAR}
 forecast_larceny <- forecast(VAR_larceny)
 
 forecast_larceny$forecast$larceny %>%
@@ -2540,7 +2515,7 @@ forecast_larceny$forecast$larceny %>%
 ```
 
 ### VAR Forecast for vandalism
-```{r}
+```{r seattle vandalism VAR}
 forecast_vandalism <- forecast(VAR_vandalism)
 
 forecast_vandalism$forecast$vandalism %>%
@@ -2563,7 +2538,7 @@ forecast_vandalism$forecast$vandalism %>%
 ```
 
 ### VAR Forecast for vehicle theft
-```{r}
+```{r seattle vehicle theft VAR}
 # not significant
 forecast_vehicle_theft <- forecast(VAR_vehicle_theft)
 
@@ -2587,7 +2562,7 @@ forecast_vehicle_theft$forecast$vehicle_theft %>%
 ```
 
 ### VAR Forecast for robbery
-```{r}
+```{r seattle robbery VAR}
 # theft from vehicle
 # not significant
 forecast_theft_fromvehicle <- forecast(VAR_theft_fromvehicle)
