@@ -2727,8 +2727,6 @@ if (exists("seattle")) is.data.frame(get("seattle")) else seattle <- RSocrata::r
 seattle <- seattle %>%
   filter(substr(report_datetime, start = 1, stop = 4) >= '2014')
 
-head(seattle)
-
 # add date
 seattle <- seattle %>%
   mutate(y_month  = substr(report_datetime, start = 1, stop = 7)) %>%
