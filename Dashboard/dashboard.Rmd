@@ -2593,7 +2593,7 @@ Row {data-height=300}
 
 
 
-### Daily confirmed cases of COVID19 in Seattle
+### Daily confirmed cases of COVID-19 in Seattle
 
 ```{r}
 dygraph(ts_diff_SEA)%>%  
