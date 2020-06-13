@@ -27,6 +27,11 @@ covid19_RI <- covid19("USA", level = 2) %>%
   # becasue when it was 1 for a very long time
   filter(confirmed > 1)
 
+## March 07 has 140 confirmed case which is impossible.
+## Google shows that date had still 3 cumulative case
+## Manual adjustment on row 5
+covid19_RI$confirmed[5] = covid19_RI$confirmed[4]
+
 # brief display
 head(covid19_RI)
 ```
@@ -115,6 +120,21 @@ title("Daily confirmed cases of COVID 19 in Boston")
 matpoints(toPredict$time, covid19_RI_diff$confirmed, 
           col = 'black',
           type = 'l')
+
+trend <- data.frame(exp(do.call(cbind, mgcv::predict.gam(gamRI$gam, toPredict, se.fit=TRUE)) %*% Pmisc::ciMat()))
+
+providence_covid <- ggplot(trend, aes(x=toPredict$time)) +
+  geom_line(aes(y=est), color = "red") +
+  geom_line(aes(y=X.2.5), color = "red", linetype = "dashed") +
+  geom_line(aes(y=X97.5), color = "red", linetype = "dashed") +
+  geom_area(aes(y=covid19_RI_diff$confirmed), alpha = 0.4) +
+  ylab("Daliy Confirmed cases") +
+  xlab("Date") +
+  theme_classic()
+
+providence_covid
+
+ggplotly(providence_covid)
 ```
 The overall trend of the covid 19 infection in Boston is successfully modeled and displayed above, including a 95% confidence interval. However, those are not very important. Now let's take a look at crime situation in Boston.
 
