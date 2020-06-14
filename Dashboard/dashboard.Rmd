@@ -1236,11 +1236,13 @@ irf_vandalism_1_plot <- ggplot(irf_vandalism_1_gg, aes(x = lags)) +
   geom_line(aes(y = mean), color = "black") +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
-  theme_classic() +
-  ggtitle("How many more daily covid19 cases there will be 
-          after 1 vandalism") +
-  xlab("Number of days after a vandalism")+
-  ylab("Number of new covid 19 cases")
+  theme_classic()  +
+  ggtitle("") +
+  xlab("Days after a new Vandalism case")+
+  ylab("COVID-19")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
 
 # html version
 ggplotly(irf_vandalism_1_plot)
@@ -1265,11 +1267,13 @@ irf_dispute_2_plot <- ggplot(irf_dispute_2_gg, aes(x=lags)) +
   geom_line(aes(y = mean), color = "black") +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
-  theme_classic() +
-  ggtitle("How many more verbal dispute cases per day there will be 
-          after 1 confirmed covid19 case") +
-  xlab("Number of days after a confimed covid 19 case")+
-  ylab("Number of verbal dispute cases")
+  theme_classic()  +
+  ggtitle("") +
+  xlab("Days after a new COVID-19 case")+
+  ylab("Verbal Dispute")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
 
 ggplotly(irf_dispute_2_plot)
 ```
@@ -1669,10 +1673,11 @@ irf_offense_1_plot <- ggplot(irf_offense_1_gg, aes(x=lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more daily covid19 cases there will be 
-          after 1 general offense") +
-  xlab("Number of days after a general offense")+
-  ylab("Number of new covid 19 cases")
+  ggtitle("") +
+  xlab("Days after a new Theft case")+
+  ylab("COVID-19")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
 # html
 ggplotly(irf_offense_1_plot)
@@ -1701,10 +1706,12 @@ irf_theft_1_plot <- ggplot(irf_theft_1_gg, aes(x=lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more daily covid19 cases there will be 
-          after 1 theft") +
-  xlab("Number of days after a theft")+
-  ylab("Number of new covid 19 cases")
+  ggtitle("") +
+  xlab("Days after a new Theft case")+
+  ylab("COVID-19")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
 
 # html
 ggplotly(irf_theft_1_plot)
@@ -2104,10 +2111,12 @@ irf_battery_1_plot <- ggplot(irf_battery_1_gg, aes(x=lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more daily covid19 cases there will be 
-          after 1 battery case") +
-  xlab("Number of days after a battery case")+
-  ylab("Number of new covid 19 cases")
+  ggtitle("") +
+  xlab("Days after a new Battery case")+
+  ylab("COVID-19")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
 
 ggplotly(irf_battery_1_plot)
 ```
@@ -2134,10 +2143,11 @@ irf_burglary_1_plot <- ggplot(irf_burglary_1_gg, aes(x=lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more daily covid19 cases there will be 
-          after 1 burglary case") +
-  xlab("Number of days after a burglary case")+
-  ylab("Number of new covid 19 cases")
+  ggtitle("") +
+  xlab("Days after a new Burglary case")+
+  ylab("COVID-19")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
 ggplotly(irf_burglary_1_plot)
 ```
@@ -2530,11 +2540,11 @@ irf_burglary_1_plot <- ggplot(irf_burglary_1_gg, aes(x=lags)) +
   geom_line(aes(y = mean), color = "black") +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
-  theme_classic() +
-  ggtitle("How many more burglary cases per day there will be 
-          after 1 confirmed COVID-19 case") +
-  xlab("Number of days after a confimed COVID-19 case")+
-  ylab("Number of bulglary cases")
+  theme_classic()+ ggtitle("") +
+  xlab("Days after a new COVID-19 case")+
+  ylab("Burglary Cases")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
 ggplotly(irf_burglary_1_plot)
 ```
@@ -2883,10 +2893,11 @@ irf_burglary_1_plot <- ggplot(irf_burglary_1_gg, aes(x=lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more burglary cases per day there will be 
-          after 1 confirmed COVID-19 case") +
-  xlab("Number of days after a confirmed COVID-19 case")+
-  ylab("Number of bulglary cases")
+  ggtitle("") +
+  xlab("Days after a new COVID-19 case")+
+  ylab("Burglary")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
 ggplotly(irf_burglary_1_plot)
 ```
