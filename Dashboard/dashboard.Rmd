@@ -1318,19 +1318,22 @@ ggplotly(boston_daily, tooltip = c("date", "n"))
 # exclude 2020-06 due to incomplete info
 yty <- boston %>%
   dplyr::select(MONTH, y_month, OFFENSE_DESCRIPTION, YEAR) %>%
-  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),
-         y_month != "2020-06") %>%
+  filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),y_month != "2020-06") %>%
   count(YEAR, MONTH, OFFENSE_DESCRIPTION) %>%
   na.omit() %>%
   ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
   geom_line() +
-  facet_free(~OFFENSE_DESCRIPTION, scales = "free") +
-  ylab("Cases") +
-  guides(color = guide_legend(reverse = TRUE)) +
-  theme(legend.title = element_blank())
-  
-ggplotly(yty) %>%
+  facet_free(~OFFENSE_DESCRIPTION, scales = "free")+
+   ylab('') + xlab("")+
+  theme(legend.title = element_blank()) +
+  # scale_x_date(date_labels = "%b")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
+ggplotly(yty, tooltip = c("YEAR", "n")) %>%
   layout(legend=list(traceorder='reversed'))
+  
+
 ```
 
 ### Investigate Person
@@ -1764,12 +1767,16 @@ plt <- phil %>%
   geom_line() + 
   facet_wrap(~text_general_code, nrow = 1) +
   guides(color = guide_legend(reverse = TRUE)) +
-  xlab('Month') +
-  ylab('Cases') +
-  labs(col='Year')
+   ylab('') + xlab("")+
+  theme(legend.title = element_blank()) +
+  # scale_x_date(date_labels = "%b")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
-ggplotly(plt) %>%
+ggplotly(plt, tooltip = c("YEAR", "n")) %>%
   layout(legend=list(traceorder='reversed'))
+
+
 ```   
  
 
@@ -2206,11 +2213,14 @@ yty <- LA %>%
   geom_line() +
   facet_free(~crm_cd_desc) +
   guides(color = guide_legend(reverse = TRUE)) +
-  ggtitle("year to year comparison of the top 5 crime in LA in the past 6 years") +
-  labs(col="Year")
+   ylab('') + xlab("")+
+  theme(legend.title = element_blank()) +
+  # scale_x_date(date_labels = "%b")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
-ggplotly(yty) %>%
-  layout(legend=list(traceorder="reversed"))
+ggplotly(yty, tooltip = c("year", "n")) %>%
+  layout(legend=list(traceorder='reversed'))
 ```
 
 ### Battery
@@ -2594,11 +2604,13 @@ plt <- atlanta %>%
   geom_line() +
   facet_free(~UCR.Literal,scales = 'free') +
   guides(color = guide_legend(reverse = TRUE)) +
-  xlab('Month') +
-  ylab('Cases') +
-  theme(legend.title = element_blank())
+   ylab('') + xlab("")+
+  theme(legend.title = element_blank()) +
+  # scale_x_date(date_labels = "%b")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
-ggplotly(plt) %>%
+ggplotly(plt, tooltip = c("YEAR", "n")) %>%
   layout(legend=list(traceorder='reversed'))
 ```
 ### Burglary
@@ -2950,11 +2962,13 @@ yty <- seattle %>%
   geom_line() +
   facet_free(~offense, scales = 'free') +
   guides(color = guide_legend(reverse = TRUE)) +
-  xlab('Month') +
-  ylab('Cases') +
-  theme(legend.title = element_blank())
+   ylab('') + xlab("")+
+  theme(legend.title = element_blank()) +
+  # scale_x_date(date_labels = "%b")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
-ggplotly(yty) %>%
+ggplotly(yty, tooltip = c("YEAR", "n")) %>%
   layout(legend=list(traceorder='reversed'))
 ```
 ### Burglary
