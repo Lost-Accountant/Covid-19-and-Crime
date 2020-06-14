@@ -407,19 +407,19 @@ ggplotly(chicago_daily)
 ### Yearly Comparison
 
 ```{r chicago year to year comparison}
-
-
 plt <- chicago %>%
   dplyr::select(y_month, month, primary_type, year) %>%
   filter(primary_type %in% chicago_summary$primary_type[1:5] | primary_type == "MOTOR VEHICLE THEFT", y_month != "2020-06") %>%
   dplyr::count(year, month, primary_type) %>%
-  na.omit()%>% 
-  ggplot(aes(x=month, y=n, group = year, color = as.character(year))) + 
+  na.omit() %>% 
+  mutate(Date = as.Date(paste("2000", month, "01", sep = "-"))) %>%
+  ggplot(aes(x=Date, y=n, group = year, color = as.character(year))) + 
   geom_line() + 
   facet_wrap(~primary_type, nrow = 1) +
   guides(color = guide_legend(reverse = TRUE)) +
    ylab('') + xlab("")+
-  theme(legend.title = element_blank())
+  theme(legend.title = element_blank()) +
+  scale_x_date(date_labels = "%b")
 
 ggplotly(plt) %>%
   layout(legend=list(traceorder='reversed'))
