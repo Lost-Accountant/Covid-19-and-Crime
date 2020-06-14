@@ -1321,12 +1321,13 @@ yty <- boston %>%
   filter(OFFENSE_DESCRIPTION %in% head(boston_summary$OFFENSE_DESCRIPTION, 5),y_month != "2020-06") %>%
   count(YEAR, MONTH, OFFENSE_DESCRIPTION) %>%
   na.omit() %>%
-  ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
+  mutate(Date = as.Date(paste("2000", MONTH, "01", sep = "-"))) %>%
+  ggplot(aes(x=Date, y=n, group = YEAR, color = as.character(YEAR))) +
   geom_line() +
   facet_free(~OFFENSE_DESCRIPTION, scales = "free")+
    ylab('') + xlab("")+
   theme(legend.title = element_blank()) +
-  # scale_x_date(date_labels = "%b")+
+  scale_x_date(date_labels = "%b")+
   theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
@@ -1759,17 +1760,18 @@ ggplotly(daily, tooltip = c("date", "n"))
 #year to year comparison of top 5 crimes since 2015
 # exclude 2020-06
 plt <- phil %>%
-  dplyr::select( MONTH, dispatch_date, text_general_code, YEAR, y_month) %>%
+  dplyr::select(MONTH, dispatch_date, text_general_code, YEAR, y_month) %>%
   filter(text_general_code %in% phil_summary$text_general_code[1:5], y_month != "2020-06") %>%
   count(YEAR, MONTH, text_general_code) %>%
-  na.omit()%>% 
-  ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) + 
+  na.omit() %>% 
+  mutate(Date = as.Date(paste("2000", MONTH, "01", sep = "-"))) %>%
+  ggplot(aes(x=Date, y=n, group = YEAR, color = as.character(YEAR))) + 
   geom_line() + 
   facet_wrap(~text_general_code, nrow = 1) +
   guides(color = guide_legend(reverse = TRUE)) +
    ylab('') + xlab("")+
   theme(legend.title = element_blank()) +
-  # scale_x_date(date_labels = "%b")+
+  scale_x_date(date_labels = "%b")+
   theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
@@ -2207,7 +2209,8 @@ yty <- LA %>%
          y_month != "2020-06") %>%
   count(year, month, crm_cd_desc) %>%
   na.omit() %>%
-  ggplot(aes(x=month, y=n,
+  mutate(Date = as.Date(paste("2000", month, "01", sep = "-"))) %>%
+  ggplot(aes(x=Date, y=n,
              group = year,
              color = as.character(year))) +
   geom_line() +
@@ -2215,7 +2218,7 @@ yty <- LA %>%
   guides(color = guide_legend(reverse = TRUE)) +
    ylab('') + xlab("")+
   theme(legend.title = element_blank()) +
-  # scale_x_date(date_labels = "%b")+
+  scale_x_date(date_labels = "%b")+
   theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
@@ -2600,13 +2603,14 @@ plt <- atlanta %>%
   filter(UCR.Literal %in% atlanta_summary$UCR.Literal[1:5], y_month != "2020-06") %>%
   dplyr::count(YEAR, MONTH, UCR.Literal) %>%
   na.omit() %>%
-  ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
+  mutate(Date = as.Date(paste("2000", MONTH, "01", sep = "-"))) %>%
+  ggplot(aes(x=Date, y=n, group = YEAR, color = as.character(YEAR))) +
   geom_line() +
   facet_free(~UCR.Literal,scales = 'free') +
   guides(color = guide_legend(reverse = TRUE)) +
    ylab('') + xlab("")+
   theme(legend.title = element_blank()) +
-  # scale_x_date(date_labels = "%b")+
+  scale_x_date(date_labels = "%b") +
   theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
@@ -2958,13 +2962,14 @@ yty <- seattle %>%
          y_month != "2020-06") %>%
   dplyr::count(YEAR, MONTH, offense) %>%
   na.omit() %>%
-  ggplot(aes(x=MONTH, y=n, group = YEAR, color = as.character(YEAR))) +
+  mutate(Date = as.Date(paste("2000", MONTH, "01", sep = "-"))) %>%
+  ggplot(aes(x=Date, y=n, group = YEAR, color = as.character(YEAR))) +
   geom_line() +
   facet_free(~offense, scales = 'free') +
   guides(color = guide_legend(reverse = TRUE)) +
    ylab('') + xlab("")+
   theme(legend.title = element_blank()) +
-  # scale_x_date(date_labels = "%b")+
+  scale_x_date(date_labels = "%b") +
   theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
