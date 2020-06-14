@@ -54,7 +54,7 @@ LOS ANGELES OPEN DATA, the city of Los Angeles
 #### Philadelphia
 [Crime Incidents (2006 - Present)](https://metadata.phila.gov/#home/datasetdetails/5543868920583086178c4f8e/representationdetails/570e7621c03327dc14f4b68d/)
 
-[csv available here] (https://cityofphiladelphia.carto.com/u/phl/tables/incidents_part1_part2/public)
+[csv available here](https://cityofphiladelphia.carto.com/u/phl/tables/incidents_part1_part2/public)
 
 City of Philadelphia
 
