@@ -338,7 +338,7 @@ i1 <- ggplot(irf_criminal_2_gg, aes(x = lags)) +
   ggtitle("") +
   xlab("Days after a new COVID-19 case")+
   ylab("Criminal Damage")+
-  theme(text = element_text(size=6), 
+  theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
 
@@ -372,7 +372,7 @@ i2 <- ggplot(irf_vehicle_2_gg, aes(x = lags)) +
   ggtitle("") +
   xlab("Days after a new COVID-19 case")+
   ylab("Vehicle Theft")+
-  theme(text = element_text(size=6), 
+  theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
 ggplotly(i2)
@@ -400,11 +400,11 @@ chicago_daily <- chicago %>%
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(chicago_summary$primary_type[1:5]))) +
   ylab('') + xlab("")+
   theme(legend.position = "none")+
-  theme(text = element_text(size=6), 
+  theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
 
-ggplotly(chicago_daily)
+ggplotly(chicago_daily, tooltip = c("Date", "n"))
 ```
 
 ### Yearly Comparison
@@ -423,10 +423,10 @@ plt <- chicago %>%
    ylab('') + xlab("")+
   theme(legend.title = element_blank()) +
   scale_x_date(date_labels = "%b")+
-  theme(text = element_text(size=6), 
+  theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
-ggplotly(plt) %>%
+ggplotly(plt, tooltip = c("year", "n")) %>%
   layout(legend=list(traceorder='reversed'))
 ```   
  
@@ -940,11 +940,32 @@ providence_daily <- providence %>%
   facet_free(~crime) +
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$crime[1:5]))) +
   ggtitle("Daily requency of top 5 crime in Providence in the past 180 days") +
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  theme(text = element_text(size=6), 
+        plot.title = element_text(hjust = 0.5))
 
 ggplotly(providence_daily)
 ```
 
+
+### Yearly Comparison
+```{r providence yearly comp}
+# daily
+providence_daily <- providence %>%
+  dplyr::select(date, crime) %>%
+  filter(crime %in% head(providence_summary$crime, 5)) %>% 
+  count(date, crime) %>%
+  ggplot(aes(date, n, group = crime, color = crime)) +
+  geom_line() + 
+  facet_free(~crime) +
+  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$crime[1:5]))) +
+  ggtitle("Daily requency of top 5 crime in Providence in the past 180 days") +
+  theme(legend.position = "none")+
+  theme(text = element_text(size=6), 
+        plot.title = element_text(hjust = 0.5))
+
+ggplotly(providence_daily)
+```
 ### VAR forecast for Assault
 ```{r providence assault var}
 # assault
