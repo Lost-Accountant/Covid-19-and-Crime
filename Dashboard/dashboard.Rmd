@@ -569,7 +569,7 @@ Row {data-height=250}
 
 
 
-### Daily confirmed cases of COVID19 in Chicago
+### Daily confirmed cases of COVID-19 in Chicago
 
 ```{r}
 
@@ -1054,7 +1054,7 @@ forecast_missing$forecast$missing %>%
 
 Row {data-height=250} 
 -----------------------------------------------------------------------
-### Daily confirmed cases of COVID19 in Rhode Islands
+### Daily confirmed cases of COVID-19 in Rhode Islands
 ```{r rhode island daily covid case}
 dygraph(ts_diff_RI) %>%
   dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red") %>%
@@ -1455,7 +1455,7 @@ Row {data-height=250}
 
 
 
-### Daily confirmed cases of COVID19 in Massachusetts
+### Daily confirmed cases of COVID-19 in Massachusetts
 ```{r massachusetts daily covid case}
 dygraph(ts_diff_MA) %>%
   dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = "red") %>%
@@ -1804,7 +1804,7 @@ forecast_theft$forecast$thefts %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 11, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 11, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -1826,7 +1826,7 @@ forecast_vehicle$forecast$vehicle %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 11, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 11, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -1848,7 +1848,7 @@ forecast_vandalism$forecast$vandalism %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 11, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 11, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -1869,7 +1869,7 @@ forecast_assault$forecast$assault %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 11, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 11, 2020")) %>%
   dyLegend(show = "follow")
 ```
 ### Other Offenses
@@ -1904,10 +1904,11 @@ forecast_offense$forecast$offense %>%
   dyAxis("x", label = paste("Days Since March 11, 2020")) %>%
   dyLegend(show = "follow")
 ```
+
 Row {data-height=250} 
 -----------------------------------------------------------------------
 
-### Daily confirmed cases of COVID19 in Philadelphia
+### Daily confirmed cases of COVID-19 in Philadelphia
 
 ```{r daily confirmed cases phil}
 dygraph(ts_diff_PA)%>%  
@@ -2230,7 +2231,7 @@ forecast_battery$forecast$battery %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 5, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 5, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -2254,7 +2255,7 @@ forecast_burglary$forecast$burglary %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 5, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 5, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -2278,7 +2279,7 @@ forecast_burglary_vehicle$forecast$burglary.from.vehicle %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 5, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 5, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -2302,7 +2303,7 @@ forecast_vandalism$forecast$vandalism %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 5, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 5, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -2326,7 +2327,7 @@ forecast_stolen_vehicle$forecast$vehicle %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 5, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 5, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -2335,7 +2336,7 @@ Row {data-height=250}
 -----------------------------------------------------------------------
 
 
-### Daily confirmed cases of COVID19 in LA
+### Daily confirmed cases of COVID-19 in LA
 ```{r LA daily covid case}
 dygraph(ts_diff_LA) %>%
   dyOptions(fillGraph = TRUE, fillAlpha = 0.4, colors = 'red') %>%
@@ -2614,7 +2615,7 @@ f_burglary$forecast$burglary %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyAxis("x", label = paste("Days Since, March 8, 2020"))
+  dyAxis("x", label = paste("Days Since March 8, 2020"))
 ```
 
 ### Assault
@@ -2635,7 +2636,7 @@ f_assault$forecast$assault %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyAxis("x", label = paste("Days Since, March 8, 2020"))
+  dyAxis("x", label = paste("Days Since March 8, 2020"))
 ```
 
 ### Auto Theft
@@ -2655,7 +2656,7 @@ f_autotheft$forecast$autotheft %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyAxis("x", label = paste("Days Since, March 8, 2020"))
+  dyAxis("x", label = paste("Days Since March 8, 2020"))
 ```
 
 ### Larceny
@@ -2675,7 +2676,7 @@ f_larceny$forecast$larceny %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyAxis("x", label = paste("Days Since, March 8, 2020"))
+  dyAxis("x", label = paste("Days Since March 8, 2020"))
 ```
 
 ### Robbery
@@ -2695,7 +2696,7 @@ f_robbery$forecast$robbery %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyAxis("x", label = paste("Days Since, March 8, 2020"))
+  dyAxis("x", label = paste("Days Since March 8, 2020"))
 ```
 
 
@@ -2964,7 +2965,7 @@ forecast_burglary$forecast$burglary %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 1, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 1, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -2986,7 +2987,7 @@ forecast_larceny$forecast$larceny %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 1, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 1, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -3008,7 +3009,7 @@ forecast_vandalism$forecast$vandalism %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 1, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 1, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -3031,7 +3032,7 @@ forecast_vehicle_theft$forecast$vehicle_theft %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 1, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 1, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
@@ -3055,7 +3056,7 @@ forecast_theft_fromvehicle$forecast$theft_from_vehicle %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(labelsSeparateLines=TRUE) %>%
-  dyAxis("x", label = paste("Days Since, March 1, 2020")) %>%
+  dyAxis("x", label = paste("Days Since March 1, 2020")) %>%
   dyLegend(show = "follow")
 ```
 
