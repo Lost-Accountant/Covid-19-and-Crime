@@ -158,11 +158,11 @@ Chicago
 
 
 
-Row{data-height=300}
+Row{data-height=350}
 -------------------------------------
    
 
-### Impulse response function (criminal damage)
+### Effect on Criminal Damage due to a new COVID-19 Case
 ```{r get the data for chiacgo}
 if (exists("chicago")) is.data.frame(get("chicago")) else chicago <- RSocrata::read.socrata(
   "https://data.cityofchicago.org/resource/ijzp-q8t2.csv?$where=year >= 2014",
@@ -257,7 +257,7 @@ CH_res_ts <- ts_xts(CH_res)
 ```{r chicago top 5 crime VAR}
 # specify common time range
 # start from when covid was a thing
-# end on May 25, to avoid effect of protests related to George Floyid.
+# end on May 25, to avoid effect of protests related to George Floyd.
 common_time <- seq.Date(start(CH_res_ts), as.Date("2020-05-25"), by = "day")
 
 # combine time series of crime and covid
@@ -335,15 +335,17 @@ i1 <- ggplot(irf_criminal_2_gg, aes(x = lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more criminal damage cases per day there will be
-          after 1 confirmed COVID-19 case") +
-  xlab("Number of days after 1 COVID-19 case")+
-  ylab("Number of criminal damange per day")
+  ggtitle("") +
+  xlab("Days after a new COVID-19 case")+
+  ylab("Criminal Damage")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
 
 ggplotly(i1)
 ```
 
-### Impulse response function (vehicle theft)
+### Effect on Vehicle Theft due to a new COVID-19 Case
 ```{r}
 # vehicle theft
 # only significant one is from covid to crime
@@ -367,10 +369,11 @@ i2 <- ggplot(irf_vehicle_2_gg, aes(x = lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more vehicle theft cases per day there will be
-          after 1 confirmed COVID-19 case") +
-  xlab("Number of days after 1 COVID-19 case")+
-  ylab("Number of vehicle theft per day")
+  ggtitle("") +
+  xlab("Days after a new COVID-19 case")+
+  ylab("Vehicle Theft")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
 
 ggplotly(i2)
 ```
@@ -381,7 +384,7 @@ ggplotly(i2)
 
 Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
-### Chicago Crime Daily Summary
+### Crime Frequency
 ```{r chicago daily freq}
 # daily
 # 2020 only
@@ -395,15 +398,17 @@ chicago_daily <- chicago %>%
   geom_line() +
   facet_wrap(~primary_type, nrow = 1) +
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(chicago_summary$primary_type[1:5]))) +
-  ylab('Cases') +
+  ylab('') + xlab("")+
   theme(legend.position = "none")
 
 ggplotly(chicago_daily)
 ```
 
-### Chicago Crime Summary
+### Yearly Comparison
 
 ```{r chicago year to year comparison}
+
+
 plt <- chicago %>%
   dplyr::select(y_month, month, primary_type, year) %>%
   filter(primary_type %in% chicago_summary$primary_type[1:5] | primary_type == "MOTOR VEHICLE THEFT", y_month != "2020-06") %>%
@@ -413,15 +418,14 @@ plt <- chicago %>%
   geom_line() + 
   facet_wrap(~primary_type, nrow = 1) +
   guides(color = guide_legend(reverse = TRUE)) +
-  xlab('Month') +
-  ylab('Cases') +
+   ylab('') + xlab("")+
   theme(legend.title = element_blank())
 
 ggplotly(plt) %>%
   layout(legend=list(traceorder='reversed'))
 ```   
  
-### VAR forecast for criminal damage
+### Criminal Damage
 ```{r}
 interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
   value = g.getValue(row, col);
@@ -441,131 +445,119 @@ f_criminal$forecast$criminal %>%
   {cbind(actuals=.$x, forecast_mean=.$mean,
          lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
          lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Prediction on how many more criminal damage cases
-          compared to yesterday', 
-          ylab = 'Day-to-day change') %>%
+  dygraph(main = '', 
+          ylab = 'Daily Change') %>%
   dyAxis("y", valueFormatter = interval_value_formatter) %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries("actuals", color = "black" , label = "Cases") %>%
+  dySeries("forecast_mean", color = "blue", label = "Predicted Cases") %>%
   dySeries(c("lower_80", "forecast_mean", "upper_80"),
            label = "80%", color = "blue") %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Days Since March 2, 2020"))
 ```
 
-### VAR forecast for vehicle theft
+### Vehicle Theft
 ```{r}
 f_vehicle <- forecast::forecast(VAR_vehicle)
 f_vehicle$forecast$vehicle %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
          lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
          lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Prediction on how many more vehicle theft cases
-          compared to yesterday', 
-          ylab = 'Day-to-day change') %>%
+  dygraph(main = '', 
+          ylab = 'Daily Change') %>%
   dyAxis("y", valueFormatter = interval_value_formatter) %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries("actuals", color = "black",  label = "Cases") %>%
+  dySeries("forecast_mean", color = "blue", label = "Predicted Cases") %>%
   dySeries(c("lower_80", "forecast_mean", "upper_80"),
            label = "80%", color = "blue") %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Days Since March 2, 2020"))
 ```
 
-### VAR forecast for assault
+### Assault
 ```{r}
 f_assault <- forecast::forecast(VAR_assault)
 f_assault$forecast$assault %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
          lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
          lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Prediction on how many more assault cases
-          compared to yesterday', 
-          ylab = 'Day-to-day change') %>%
+  dygraph(main = '', 
+          ylab = 'Daily Change') %>%
   dyAxis("y", valueFormatter = interval_value_formatter) %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries("actuals", color = "black",  label = "Cases") %>%
+  dySeries("forecast_mean", color = "blue",label = "Predicted Cases" ) %>%
   dySeries(c("lower_80", "forecast_mean", "upper_80"),
            label = "80%", color = "blue") %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Days Since March 2, 2020"))
 ```
 
-### VAR forecast for battery
+### Battery
 ```{r}
 f_battery <- forecast::forecast(VAR_battery)
 f_battery$forecast$battery %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
          lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
          lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Prediction on how many more battery cases
-          compared to yesterday', 
-          ylab = 'Day-to-day change') %>%
+  dygraph(main = '', 
+          ylab = 'Daily Change') %>%
   dyAxis("y", valueFormatter = interval_value_formatter) %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries("actuals", color = "black", label = "Cases") %>%
+  dySeries("forecast_mean", color = "blue", label = " Predicted Cases") %>%
   dySeries(c("lower_80", "forecast_mean", "upper_80"),
            label = "80%", color = "blue") %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Days Since March 2, 2020"))
 ```
 
-### VAR forecast for deceptive
+### Deceptive Practice
 ```{r}
 f_deceptive <- forecast::forecast(VAR_deceptive)
 f_deceptive$forecast$deceptive %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
          lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
          lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Prediction on how many more deceptive practice cases
-          compared to yesterday', 
-          ylab = 'Day-to-day change') %>%
+  dygraph(main = '', 
+          ylab = 'Daily Change') %>%
   dyAxis("y", valueFormatter = interval_value_formatter) %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries("actuals", color = "black", label = "Cases" ) %>%
+  dySeries("forecast_mean", color = "blue", label = "Predicted Cases") %>%
   dySeries(c("lower_80", "forecast_mean", "upper_80"),
            label = "80%", color = "blue") %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Days Since March 2, 2020"))
 ```
 
-### VAR forecast for theft
+### Theft
 ```{r}
 f_theft <- forecast::forecast(VAR_theft)
 f_theft$forecast$theft %>% 
   {cbind(actuals=.$x, forecast_mean=.$mean,
          lower_95=.$lower[,"95%"], upper_95=.$upper[,"95%"],
          lower_80=.$lower[,"80%"], upper_80=.$upper[,"80%"])} %>%
-  dygraph(main = 'Prediction on how many more theft cases
-          compared to yesterday', ylab = 'Day-to-day change') %>%
+  dygraph(main = '', ylab = 'Daily change') %>%
   dyAxis("y", valueFormatter = interval_value_formatter) %>%
-  dySeries("actuals", color = "black") %>%
-  dySeries("forecast_mean", color = "blue", label = "forecast") %>%
+  dySeries("actuals", color = "black", label = "Cases") %>%
+  dySeries("forecast_mean", color = "blue", label = "Predicted Cases") %>%
   dySeries(c("lower_80", "forecast_mean", "upper_80"),
            label = "80%", color = "blue") %>%
   dySeries(c("lower_95", "forecast_mean", "upper_95"),
            label = "95%", color = "blue")%>%
   dyLegend(show = 'follow') %>%
-  dyRangeSelector() %>%
-  dyAxis("x", label = paste("Numebr of days since", common_time[1]))
+  dyAxis("x", label = paste("Days Since March 2, 2020"))
 ```
 
-Row {data-height=300} 
+Row {data-height=250} 
 -----------------------------------------------------------------------
 
 
