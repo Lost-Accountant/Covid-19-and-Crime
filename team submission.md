@@ -42,6 +42,28 @@ Analyze Boston, the city of Boston's open data hub.
 #### Chicago
 [Crimes in Chicago - 20001 to present](https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-present/ijzp-q8t2)
 
-[Raw csv file available here](https://data.cityofchicago.org/resource/ijzp-q8t2.csv) (APP TOKEN REQUIRED)
-
 Chicago Data Portal, City of Chicago
+
+#### Los Angeles
+[Crime Data from 2010 to 2019](https://data.lacity.org/A-Safe-City/Crime-Data-from-2010-to-2019/63jg-8b9z)
+
+[Crime Data from 2020 to Present](https://data.lacity.org/A-Safe-City/Crime-Data-from-2020-to-Present/2nrs-mtv8)
+
+LOS ANGELES OPEN DATA, the city of Los Angeles
+
+#### Philadelphia
+[Crime Incidents (2006 - Present)](https://metadata.phila.gov/#home/datasetdetails/5543868920583086178c4f8e/representationdetails/570e7621c03327dc14f4b68d/)
+
+[csv available here] (https://cityofphiladelphia.carto.com/u/phl/tables/incidents_part1_part2/public)
+
+City of Philadelphia
+
+#### Providence
+[Crime Statistics - CASE AND ARREST LOGS](https://www.providenceri.gov/police/crime-statistics/)
+
+Providence City Hall
+
+#### Seattle
+[SPD Crime Data: 2008-Present](https://data.seattle.gov/Public-Safety/SPD-Crime-Data-2008-Present/tazs-3rd5)
+
+City of Seattle
