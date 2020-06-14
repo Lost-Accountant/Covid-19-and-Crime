@@ -27,7 +27,21 @@ Package 'COVID19' at CRAN (https://cran.r-project.org/web/packages/COVID19/index
 which comes from COVID-19 Data Hub (https://covid19datahub.io/index.html)
 
 ### Crime reports
-#### Boston
-Analyze Boston, the city of Boston's open data hub (https://data.boston.gov/dataset/crime-incident-reports-august-2015-to-date-source-new-system)
+#### Atlanta
+[APD Weekly Crime Reports from 2014 to 2020](https://www.atlantapd.org/i-want-to/crime-data-downloads)
 
-Raw csv file available at https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmpqy9o_jgd.csv
+Atlanta Police Department.
+
+#### Boston
+[CRIME INCIDENT REPORTS (AUGUST 2015 - TO DATE) (SOURCE: NEW SYSTEM)](https://data.boston.gov/dataset/crime-incident-reports-august-2015-to-date-source-new-system)
+
+[Raw csv file available here](https://data.boston.gov/dataset/6220d948-eae2-4e4b-8723-2dc8e67722a3/resource/12cb3883-56f5-47de-afa5-3b1cf61b257b/download/tmpqy9o_jgd.csv)
+
+Analyze Boston, the city of Boston's open data hub. 
+
+#### Chicago
+[Crimes in Chicago - 20001 to present](https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-present/ijzp-q8t2)
+
+[Raw csv file available here](https://data.cityofchicago.org/resource/ijzp-q8t2.csv) (APP TOKEN REQUIRED)
+
+Chicago Data Portal, City of Chicago
