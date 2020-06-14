@@ -14,9 +14,6 @@ The dashboard is available at
 https://covid19crime.herokuapp.com/
 
 
-
-[Backup](https://lost-accountant.github.io/Covid-19-and-Crime/)
-
 ## Video
 The video is available at 
 https://youtube.com
