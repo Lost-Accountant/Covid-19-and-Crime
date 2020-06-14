@@ -11,7 +11,11 @@ and thank your for your time on reviewing our work.
 
 ## Dashboard
 The dashboard is available at
-http://individual.utoronto.ca/nayan/datafest.html
+https://covid19crime.herokuapp.com/
+
+
+
+[Backup](https://lost-accountant.github.io/Covid-19-and-Crime/)
 
 ## Video
 The video is available at 
