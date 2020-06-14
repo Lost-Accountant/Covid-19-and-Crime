@@ -338,7 +338,7 @@ i1 <- ggplot(irf_criminal_2_gg, aes(x = lags)) +
   ggtitle("") +
   xlab("Days after a new COVID-19 case")+
   ylab("Criminal Damage")+
-  theme(text = element_text(size=8), 
+  theme(text = element_text(size=6), 
         plot.title = element_text(hjust = 0.5))
 
 
@@ -372,7 +372,7 @@ i2 <- ggplot(irf_vehicle_2_gg, aes(x = lags)) +
   ggtitle("") +
   xlab("Days after a new COVID-19 case")+
   ylab("Vehicle Theft")+
-  theme(text = element_text(size=8), 
+  theme(text = element_text(size=6), 
         plot.title = element_text(hjust = 0.5))
 
 ggplotly(i2)
@@ -399,7 +399,10 @@ chicago_daily <- chicago %>%
   facet_wrap(~primary_type, nrow = 1) +
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(chicago_summary$primary_type[1:5]))) +
   ylab('') + xlab("")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  theme(text = element_text(size=6), 
+        plot.title = element_text(hjust = 0.5))
+
 
 ggplotly(chicago_daily)
 ```
@@ -419,7 +422,9 @@ plt <- chicago %>%
   guides(color = guide_legend(reverse = TRUE)) +
    ylab('') + xlab("")+
   theme(legend.title = element_blank()) +
-  scale_x_date(date_labels = "%b")
+  scale_x_date(date_labels = "%b")+
+  theme(text = element_text(size=6), 
+        plot.title = element_text(hjust = 0.5))
 
 ggplotly(plt) %>%
   layout(legend=list(traceorder='reversed'))
@@ -630,7 +635,7 @@ Providence
 =======================================================================
 
 
-Row{data-height=300 .tabset .tabset-fade}
+Row{data-height=350 }
 -------------------------------------
 ```{r get data for providence}
 if (exists("providence")) is.data.frame(get("providence")) else providence <- read.socrata(
@@ -771,39 +776,39 @@ VAR_missing <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=optimal_missing$selection[
 VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=optimal_vandalism$selection[1])
 ```
 
-### Impulse response function (Larceny from vehicle 1)
-```{r irf providence larceny from vehicle to covid}
-par(mfrow = c(1,2))
-lags = c(1:25)
+<!-- ### Impulse response function (Larceny from vehicle 1) -->
+<!-- ```{r irf providence larceny from vehicle to covid} -->
+<!-- par(mfrow = c(1,2)) -->
+<!-- lags = c(1:25) -->
 
-# larceny from vehicle
-# crime tto covid
-irf_vehicle1 <- irf(VAR_vehicle,
-                    impulse = "larceny_from_vehicle",
-                    response = "residuals",
-                    n.ahead = 24)
+<!-- # larceny from vehicle -->
+<!-- # crime tto covid -->
+<!-- irf_vehicle1 <- irf(VAR_vehicle, -->
+<!--                     impulse = "larceny_from_vehicle", -->
+<!--                     response = "residuals", -->
+<!--                     n.ahead = 24) -->
 
-# ggplot version of irf
-irf_vehicle_1_gg <- data.frame(irf_vehicle1$irf$larceny_from_vehicle[,1],
-                   irf_vehicle1$Lower$larceny_from_vehicle[,1],
-                   irf_vehicle1$Upper$larceny_from_vehicle[,1])
+<!-- # ggplot version of irf -->
+<!-- irf_vehicle_1_gg <- data.frame(irf_vehicle1$irf$larceny_from_vehicle[,1], -->
+<!--                    irf_vehicle1$Lower$larceny_from_vehicle[,1], -->
+<!--                    irf_vehicle1$Upper$larceny_from_vehicle[,1]) -->
 
-colnames(irf_vehicle_1_gg) <- c("mean", "lower", "upper")
+<!-- colnames(irf_vehicle_1_gg) <- c("mean", "lower", "upper") -->
 
-irf_vechile_1_plot <- ggplot(irf_vehicle_1_gg, aes(x = lags)) +
-  geom_line(aes(y = mean), color = "black") +
-  geom_hline(yintercept = 0, color = "blue") +
-  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
-  theme_classic() +
-  ggtitle("How many more daily covid19 cases there will be 
-          after 1 larceny from vehicle") +
-  xlab("Number of days after a larceny from vehicle")+
-  ylab("Number of new covid 19 cases")
+<!-- irf_vechile_1_plot <- ggplot(irf_vehicle_1_gg, aes(x = lags)) + -->
+<!--   geom_line(aes(y = mean), color = "black") + -->
+<!--   geom_hline(yintercept = 0, color = "blue") + -->
+<!--   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) + -->
+<!--   theme_classic() + -->
+<!--   ggtitle("How many more daily covid19 cases there will be  -->
+<!--           after 1 larceny from vehicle") + -->
+<!--   xlab("Number of days after a larceny from vehicle")+ -->
+<!--   ylab("Number of new covid 19 cases") -->
 
-# html version
-# from crime to covid
-ggplotly(irf_vechile_1_plot)
-```
+<!-- # html version -->
+<!-- # from crime to covid -->
+<!-- ggplotly(irf_vechile_1_plot) -->
+<!-- ``` -->
 
 ### Impulse response function (Larceny from vehicle 2)
 ```{r irf providence covid to larceny vehicle}
@@ -839,31 +844,31 @@ irf_vechile_2_plot <- ggplot(irf_vehicle_2_gg, aes(x = lags)) +
 ggplotly(irf_vechile_2_plot)
 ```
 
-### Impulse response function (Assault)
-```{r irf providence assault}
-irf_assault_1 <- irf(VAR_assault,
-                     impulse = "residuals",
-                     response = "assault",
-                     n.ahead = 24)
+<!-- ### Impulse response function (Assault) -->
+<!-- ```{r irf providence assault} -->
+<!-- irf_assault_1 <- irf(VAR_assault, -->
+<!--                      impulse = "residuals", -->
+<!--                      response = "assault", -->
+<!--                      n.ahead = 24) -->
 
-irf_assault_1_gg <- data.frame(irf_assault_1$irf$residuals[,1],
-                               irf_assault_1$Lower$residuals[,1],
-                               irf_assault_1$Upper$residuals[,1])
+<!-- irf_assault_1_gg <- data.frame(irf_assault_1$irf$residuals[,1], -->
+<!--                                irf_assault_1$Lower$residuals[,1], -->
+<!--                                irf_assault_1$Upper$residuals[,1]) -->
 
-colnames(irf_assault_1_gg) <- c("mean", "lower", "upper")
+<!-- colnames(irf_assault_1_gg) <- c("mean", "lower", "upper") -->
 
-irf_assault_1_plot <- ggplot(irf_assault_1_gg, aes(x=lags)) +
-  geom_line(aes(y = mean), color = "black") +
-  geom_hline(yintercept = 0, color = "blue") +
-  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
-  theme_classic() +
-  ggtitle("How many more assault cases per day there will be 
-          after 1 confirmed covid19 case") +
-  xlab("Number of days after a confimed covid 19 case") +
-  ylab("Number of assault cases")
+<!-- irf_assault_1_plot <- ggplot(irf_assault_1_gg, aes(x=lags)) + -->
+<!--   geom_line(aes(y = mean), color = "black") + -->
+<!--   geom_hline(yintercept = 0, color = "blue") + -->
+<!--   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) + -->
+<!--   theme_classic() + -->
+<!--   ggtitle("How many more assault cases per day there will be  -->
+<!--           after 1 confirmed covid19 case") + -->
+<!--   xlab("Number of days after a confimed covid 19 case") + -->
+<!--   ylab("Number of assault cases") -->
 
-ggplotly(irf_assault_1_plot)
-```
+<!-- ggplotly(irf_assault_1_plot) -->
+<!-- ``` -->
 
 ### Impulse response function (Vandalism)
 ```{r irf providence vandalism}
@@ -1038,7 +1043,7 @@ forecast_missing$forecast$missing %>%
   dyLegend(show = "follow")
 ```
 
-Row {data-height=300} 
+Row {data-height=250} 
 -----------------------------------------------------------------------
 ### Daily confirmed cases of COVID19 in Rhode Islands
 ```{r rhode island daily covid case}
@@ -1068,7 +1073,7 @@ Boston
 
 
 
-Row{data-height=300}
+Row{data-height=350}
 -------------------------------------
 ```{r get data for boston, echo=FALSE}
 #### Boston data ####
@@ -1428,7 +1433,7 @@ forecast_dispute$forecast$dispute %>%
 ```
 
 
-Row {data-height=300} 
+Row {data-height=250} 
 -----------------------------------------------------------------------
 
 
@@ -1459,7 +1464,7 @@ Philadelphia
 
 
 
-Row{data-height=300}
+Row{data-height=350}
 -------------------------------------
    
 
@@ -1877,7 +1882,7 @@ forecast_assault$forecast$assault %>%
   dyLegend(show = "follow")
 ```
 
-Row {data-height=300} 
+Row {data-height=250} 
 -----------------------------------------------------------------------
 
 
@@ -1908,7 +1913,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 Los Angeles
 =======================================================================
 
-Row{data-height=300}
+Row{data-height=350}
 -------------------------------------
 ```{r get data for LA, echo=FALSE}
 #### LA data ####
@@ -2304,7 +2309,7 @@ forecast_stolen_vehicle$forecast$vehicle %>%
 ```
 
 
-Row {data-height=300} 
+Row {data-height=250} 
 -----------------------------------------------------------------------
 
 
@@ -2331,7 +2336,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 Atlanta
 =======================================================================
 
-Row{data-height=300}
+Row{data-height=350}
 -------------------------------------
 ```{r get the data for atlanta}
 url1 <- 'https://www.atlantapd.org/Home/ShowDocument?id=3279'
@@ -2676,7 +2681,7 @@ f_robbery$forecast$robbery %>%
 ```
 
 
-Row {data-height=300} 
+Row {data-height=250} 
 -----------------------------------------------------------------------
 
 
@@ -2709,7 +2714,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 Seattle
 =======================================================================
 
-Row{data-height=300}
+Row{data-height=350}
 -------------------------------------
    
 ```{r get the data for seattle}
@@ -3034,7 +3039,7 @@ forecast_theft_fromvehicle$forecast$theft_from_vehicle %>%
   dyLegend(show = "follow")
 ```
 
-Row {data-height=300} 
+Row {data-height=250} 
 -----------------------------------------------------------------------
 
 
