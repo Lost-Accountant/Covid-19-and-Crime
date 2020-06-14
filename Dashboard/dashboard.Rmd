@@ -810,7 +810,7 @@ VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=optimal_vandalism$select
 <!-- ggplotly(irf_vechile_1_plot) -->
 <!-- ``` -->
 
-### Impulse response function (Larceny from vehicle 2)
+### Effect on Vehicle Larceny due to a new COVID-19 Case
 ```{r irf providence covid to larceny vehicle}
 # larceny from vehicle
 # covid to crime
@@ -833,10 +833,12 @@ irf_vechile_2_plot <- ggplot(irf_vehicle_2_gg, aes(x = lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more larceny from vechile cases per day there will be 
-          after 1 confirmed covid19 case") +
-  xlab("Number of days after a confimed covid 19 case")+
-  ylab("Number of larceny from vechile")
+  ggtitle("") +
+  xlab("Days after a new COVID-19 case")+
+  ylab("Larceny (Vehicle)")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
 # this one not really significant at a bit above 0.05 and the impact is not even -1.0. So could be okay to leave this out as well.
 
 # html version
@@ -870,7 +872,7 @@ ggplotly(irf_vechile_2_plot)
 <!-- ggplotly(irf_assault_1_plot) -->
 <!-- ``` -->
 
-### Impulse response function (Vandalism)
+### Effect on COVID-19 due to a new Vandalism Case
 ```{r irf providence vandalism}
 # vandalism significant to covid
 irf_vandalism_1 <- irf(VAR_vandalism,
@@ -890,15 +892,17 @@ irf_vandalism_1_plot <- ggplot(irf_vandalism_1_gg, aes(x = lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more daily covid19 cases there will be 
-          after 1 vandalism") +
-  xlab("Number of days after a vandalism")+
-  ylab("Number of new covid 19 cases")
+  ggtitle("") +
+  xlab("Days after a new Vandalism case")+
+  ylab("COVID-19")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
 
 ggplotly(irf_vandalism_1_plot)
 ```
 
-### Impulse response function (Missing Person)
+### Effect on Missing Persons due to a new COVID-19 Case
 ```{r irf providence missing}
 # covid significant to missing
 irf_missing_1 <- irf(VAR_missing,
@@ -917,10 +921,12 @@ irf_missing_1_plot <- ggplot(irf_missing_1_gg, aes(x=lags)) +
   geom_hline(yintercept = 0, color = "blue") +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
-  ggtitle("How many more missing person cases per day there will be 
-          after 1 confirmed covid19 case") +
-  xlab("Number of days after a confimed covid 19 case") +
-  ylab("Number of missing person cases")
+  ggtitle("") +
+  xlab("Days after a new COVID-19 case")+
+  ylab("Missing Persons")+
+  theme(text = element_text(size=8), 
+        plot.title = element_text(hjust = 0.5))
+
 
 ggplotly(irf_missing_1_plot)
 ```
@@ -928,7 +934,7 @@ ggplotly(irf_missing_1_plot)
 
 Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
-### Providence Crime Daily Summary
+### Crime Frequency
 ```{r providence daily freq}
 # daily
 providence_daily <- providence %>%
@@ -939,34 +945,17 @@ providence_daily <- providence %>%
   geom_line() + 
   facet_free(~crime) +
   scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$crime[1:5]))) +
-  ggtitle("Daily requency of top 5 crime in Providence in the past 180 days") +
+  ylab('') + xlab("")+
   theme(legend.position = "none")+
-  theme(text = element_text(size=6), 
+  theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
 
 ggplotly(providence_daily)
 ```
 
 
-### Yearly Comparison
-```{r providence yearly comp}
-# daily
-providence_daily <- providence %>%
-  dplyr::select(date, crime) %>%
-  filter(crime %in% head(providence_summary$crime, 5)) %>% 
-  count(date, crime) %>%
-  ggplot(aes(date, n, group = crime, color = crime)) +
-  geom_line() + 
-  facet_free(~crime) +
-  scale_fill_brewer(palette = "Set1", breaks = rev(levels(providence_summary$crime[1:5]))) +
-  ggtitle("Daily requency of top 5 crime in Providence in the past 180 days") +
-  theme(legend.position = "none")+
-  theme(text = element_text(size=6), 
-        plot.title = element_text(hjust = 0.5))
 
-ggplotly(providence_daily)
-```
-### VAR forecast for Assault
+### Assault
 ```{r providence assault var}
 # assault
 # significant
@@ -991,7 +980,7 @@ forecast_assault$forecast$assault %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Larceny
+### Larceny
 ```{r providence larceny var}
 # larceny
 # not significant to larceny
@@ -1016,7 +1005,7 @@ forecast_larceny$forecast$larceny %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Larceny from Vehicle
+### Larceny from Vehicle
 ```{r providence larceny from vehicle var}
 forecast_vehicle <- forecast::forecast(VAR_vehicle)
 
@@ -1039,7 +1028,7 @@ forecast_vehicle$forecast$larceny_from_vehicle %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Missing Person
+### Missing Persons
 ```{r providence missing person var}
 # missing person
 # significant
@@ -1224,7 +1213,7 @@ VAR_medical <- VAR(y=as.ts(combined_diff[,c(3,6)]), p=optimal_medical$selection[
 VAR_vandalism <- VAR(y=as.ts(combined_diff[,c(4,6)]), p=optimal_vandalism$selection[1])
 VAR_dispute <- VAR(y=as.ts(combined_diff[,c(5,6)]), p=optimal_dispute$selection[1])
 ```
-### Impulse response function (Vandalism)
+### Effect on COVID-19 due to a new Vandalism Case
 ```{r irf boston vandalism}
 lags = c(1:25)
 par(mfrow = c(1,2))
@@ -1257,7 +1246,7 @@ irf_vandalism_1_plot <- ggplot(irf_vandalism_1_gg, aes(x = lags)) +
 ggplotly(irf_vandalism_1_plot)
 ```
 
-### Impulse response function (Verbal dispute)
+### Effect on Verbal Dispute due to a new COVID-19 Case
 ```{r irf boston verbal dispute}
 # verbal dispute
 # from covid
@@ -1290,7 +1279,7 @@ ggplotly(irf_dispute_2_plot)
 
 Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
-### Boston Crime Daily Summary
+### Crime Frequency
 ```{r boston daily freq}
 # daily
 # 2020 only
@@ -1313,7 +1302,7 @@ ggplotly(boston_daily)
 # bunch of crime seem to be affected by BLM protests
 ```
 
-### Boston Crime Summary
+### Yearly Comparison
 ```{r boston yty comparison}
 # year to year comparison
 # exclude 2020-06 due to incomplete info
@@ -1334,7 +1323,7 @@ ggplotly(yty) %>%
   layout(legend=list(traceorder='reversed'))
 ```
 
-### VAR forecast for Investigate Person
+### Investigate Person
 ```{r boston investigate var}
 forecast_investigate <- forecast(VAR_investigate)
 
@@ -1357,7 +1346,7 @@ forecast_investigate$forecast$investigate %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Property Damage
+### Property Damage
 ```{r boston property damage var}
 # property damage
 forecast_damage <- forecast(VAR_damage)
@@ -1381,7 +1370,7 @@ forecast_damage$forecast$property.damage %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Medical cases
+### Medical cases
 ```{r boston medical var}
 # medical attention
 forecast_medical <- forecast(VAR_medical)
@@ -1405,7 +1394,7 @@ forecast_medical$forecast$medical %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Vandalism
+###Vandalism
 ```{r boston vandalism var}
 # vandalism
 forecast_vandalism <- forecast(VAR_vandalism)
@@ -1429,7 +1418,7 @@ forecast_vandalism$forecast$vandalism %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Verbal Dispute
+###  Verbal Dispute
 ```{r boston dispute var}
 # verbal dispute
 forecast_dispute <- forecast(VAR_dispute)
@@ -1489,7 +1478,7 @@ Row{data-height=350}
 -------------------------------------
    
 
-### Impulse response function (criminal damage)
+###  Effect on COVID-19 due to a new General Offense
 ```{r get data for philly}
 phil2020 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2&format=csv&skipfields=cartodb_id,the_geom,the_geom_webmercator&q=SELECT%20*%20,%20ST_Y(the_geom)%20AS%20lat,%20ST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E=%20%272020-01-01%27%20AND%20dispatch_date_time%20%3C%20%272021-01-01%27')
 
@@ -1689,7 +1678,7 @@ irf_offense_1_plot <- ggplot(irf_offense_1_gg, aes(x=lags)) +
 ggplotly(irf_offense_1_plot)
 ```
 
-### Impulse response function (theft)
+###  Effect on COVID-19 due to a new Theft Case
 ```{r theft irf philly}
 # theft
 # irf
@@ -1727,7 +1716,7 @@ ggplotly(irf_theft_1_plot)
 
 Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
-### Philadelphia Crime Daily Summary
+### Crime Frequency
 ```{r philly daily freq}
 #daily, 2020 only
 daily <- phil %>%
@@ -1746,7 +1735,7 @@ ggplotly(daily)
 
 ```
 
-### Philadelphia Crime Summary
+### Yearly Comparison
 
 ```{r}
 #year to year comparison of top 5 crimes since 2015
@@ -1768,19 +1757,6 @@ ggplotly(plt) %>%
   layout(legend=list(traceorder='reversed'))
 ```   
  
-### VAR forecast for All Other Offenses
-```{r interval value formatter phil}
-interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
-  value = g.getValue(row, col);
-  if(value[0] != value[2]) {
-    lower = Dygraph.numberValueFormatter(value[0], opts);
-    upper = Dygraph.numberValueFormatter(value[2], opts);
-    return '[' + lower + ', ' + upper + ']';
-  } else {
-    return Dygraph.numberValueFormatter(num, opts);
-  }
-}"
-```
 
 ```{r construct forecasts phil var}
 #construct all the forecasts for philly
@@ -1812,7 +1788,7 @@ forecast_offense$forecast$offense %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Theft
+### Theft
 ```{r phil theft forecast var}
 #forecast for theft
 #slightly signfigant
@@ -1835,7 +1811,7 @@ forecast_theft$forecast$thefts %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Theft from Vehicle
+### Theft from Vehicle
 ```{r phil theft from vehicle forecast var}
 #forecast for theft from vehicle
 #signifigant at one point
@@ -1858,7 +1834,7 @@ forecast_vehicle$forecast$vehicle %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Vandalism
+###  Vandalism
 ```{r phil vandalism forecast var}
 #forecast of vandalism
 #signifigant at one point
@@ -1881,7 +1857,7 @@ forecast_vandalism$forecast$vandalism %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Assault
+###  Assault
 ```{r phil assault forecast var}
 #forecast for assault
 forecast_assault$forecast$assault %>%
@@ -1901,6 +1877,19 @@ forecast_assault$forecast$assault %>%
   dyRangeSelector() %>%
   dyAxis("x", label = paste("Number of days since", common_time[1])) %>%
   dyLegend(show = "follow")
+```
+### Other Offenses
+```{r interval value formatter phil}
+interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
+  value = g.getValue(row, col);
+  if(value[0] != value[2]) {
+    lower = Dygraph.numberValueFormatter(value[0], opts);
+    upper = Dygraph.numberValueFormatter(value[2], opts);
+    return '[' + lower + ', ' + upper + ']';
+  } else {
+    return Dygraph.numberValueFormatter(num, opts);
+  }
+}"
 ```
 
 Row {data-height=250} 
@@ -2088,7 +2077,7 @@ VAR_vehicle <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
                    p=optimal_vehicle$selection[1])
 ```
 
-### Impulse response functiton (Battery)
+###  Effect on COVID-19 due to a new Battery Case
 ```{r irf LA battery}
 lags = c(1:25)
 
@@ -2123,7 +2112,7 @@ irf_battery_1_plot <- ggplot(irf_battery_1_gg, aes(x=lags)) +
 ggplotly(irf_battery_1_plot)
 ```
 
-### Impulse response function (Burglary)
+###  Effect on COVID-19 due to a new Burglary Case
 ```{r irf LA burglary}
 # burglary
 # crime significant to covid
@@ -2159,7 +2148,7 @@ ggplotly(irf_burglary_1_plot)
 
 Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
-### LA Crime Daily Summary
+### Crime Frequency
 ```{r LA daily freq}
 # daily
 # 2020 only
@@ -2180,7 +2169,7 @@ daily <- LA %>%
 ggplotly(daily)
 ```
 
-### LA Crime Summary
+### Yearly Comparison
 ```{r LA yty comparison}
 # year to year comparison
 # exlcude 2020-06
@@ -2204,7 +2193,7 @@ ggplotly(yty) %>%
   layout(legend=list(traceorder="reversed"))
 ```
 
-### VAR forecast for Battery
+### Battery
 ```{r LA battery var}
 # battery
 # covid not significant to crime
@@ -2229,7 +2218,7 @@ forecast_battery$forecast$battery %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Burglary 
+### Burglary 
 ```{r LA burglary var}
 # burglary
 # not significant to burglary
@@ -2254,7 +2243,7 @@ forecast_burglary$forecast$burglary %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Burglary from Vehicle
+### Burglary from Vehicle
 ```{r LA burglary vehicle var}
 # burglary from vehicle
 # not significant
@@ -2279,7 +2268,7 @@ forecast_burglary_vehicle$forecast$burglary.from.vehicle %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Vandalism
+### Vandalism
 ```{r LA vandalism var}
 # vandalism
 # not significant
@@ -2304,7 +2293,7 @@ forecast_vandalism$forecast$vandalism %>%
   dyLegend(show = "follow")
 ```
 
-### VAR forecast for Stolen Vehicle
+### Stolen Vehicle
 ```{r LA stolen vehicle var}
 # stolen vehicle
 # not significant
@@ -2521,7 +2510,7 @@ VAR_robbery <- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
                               p=optimal_robbery$selection[1])
 ```
 
-### Impulse response function (burglary)
+###  Effect on Burglary due to a new COVID-19 Case
 ```{r atlanta irf burglary }
 lags = c(1:25)
 
@@ -2552,7 +2541,7 @@ ggplotly(irf_burglary_1_plot)
 
 Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
-### Atlanta Crime Daily Summary
+### Crime Frequency
 ```{r atlanta daily freq}
 # daily
 # 2020 only
@@ -2569,7 +2558,7 @@ atlanta_daily <- atlanta %>%
 ggplotly(atlanta_daily)
 ```
 
-### Atlanta Crime Summary
+### Yearly Comparison
 
 ```{r}
 # year to year comparison
@@ -2589,7 +2578,7 @@ plt <- atlanta %>%
 ggplotly(plt) %>%
   layout(legend=list(traceorder='reversed'))
 ```
-### VAR Forecast for burglary
+### Burglary
 
 ```{r atlanta burglary VAR}
 f_burglary <- forecast::forecast(VAR_burglary)
@@ -2612,7 +2601,7 @@ f_burglary$forecast$burglary %>%
   dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
-### VAR Forecast for assault
+### Assault
 
 ```{r atlanta assault VAR}
 f_assault <- forecast::forecast(VAR_assault)
@@ -2635,7 +2624,7 @@ f_assault$forecast$assault %>%
   dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
-### VAR Forecast for auto theft
+### Auto Theft
 ```{r atlanta auto theft VAR}
 f_autotheft <- forecast::forecast(VAR_autotheft)
 f_autotheft$forecast$autotheft %>% 
@@ -2657,7 +2646,7 @@ f_autotheft$forecast$autotheft %>%
   dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
-### VAR Forecast for larceny
+### Larceny
 ```{r atlanta larceny VAR}
 f_larceny <- forecast::forecast(VAR_larceny)
 f_larceny$forecast$larceny %>% 
@@ -2679,7 +2668,7 @@ f_larceny$forecast$larceny %>%
   dyAxis("x", label = paste("Numebr of days since", common_time[1]))
 ```
 
-### VAR Forecast for robbery
+### Robbery
 ```{r atlanta robbery VAR}
 f_robbery <- forecast::forecast(VAR_robbery)
 f_robbery$forecast$robbery %>% 
@@ -2872,7 +2861,7 @@ VAR_theft_fromvehicle<- VAR(y=as.ts(na.omit(combined_diff)[,c(5,6)]),
                               p=optimal_theft_fromvehicle$selection[1])
 ```
 
-### Impulse response function (burglary)
+###  Effect on Burglary due to a new COVID-19 Case
 ```{r seattle irf}
 lags = c(1:25)
 
@@ -2905,7 +2894,7 @@ ggplotly(irf_burglary_1_plot)
 Row {data-height=400 .tabset .tabset-fade }
 -------------------------------------
    
-### Seattle Crime Daily Summary
+### Crime Frequency
 ```{r seattle daily freq}
 # daily, 2020 only
 seattle_daily <- seattle %>%
@@ -2921,7 +2910,7 @@ seattle_daily <- seattle %>%
 ggplotly(seattle_daily)
 ```
 
-### Seattle Crime Summary
+### Yearly Comparison
 ```{r seattle year to year comparison}
 # exclude 2020-06
 yty <- seattle %>%
@@ -2941,7 +2930,7 @@ yty <- seattle %>%
 ggplotly(yty) %>%
   layout(legend=list(traceorder='reversed'))
 ```
-### VAR Forecast for burglary
+### Burglary
 
 ```{r seattle burglary VAR}
 forecast_burglary <- forecast(VAR_burglary)
@@ -2965,7 +2954,7 @@ forecast_burglary$forecast$burglary %>%
   dyLegend(show = "follow")
 ```
 
-### VAR Forecast for larceny
+### Larceny
 ```{r seattle larceny VAR}
 forecast_larceny <- forecast(VAR_larceny)
 
@@ -2988,7 +2977,7 @@ forecast_larceny$forecast$larceny %>%
   dyLegend(show = "follow")
 ```
 
-### VAR Forecast for vandalism
+### Vandalism
 ```{r seattle vandalism VAR}
 forecast_vandalism <- forecast(VAR_vandalism)
 
@@ -3011,7 +3000,7 @@ forecast_vandalism$forecast$vandalism %>%
   dyLegend(show = "follow")
 ```
 
-### VAR Forecast for vehicle theft
+### Vehicle Theft
 ```{r seattle vehicle theft VAR}
 # not significant
 forecast_vehicle_theft <- forecast(VAR_vehicle_theft)
@@ -3035,7 +3024,7 @@ forecast_vehicle_theft$forecast$vehicle_theft %>%
   dyLegend(show = "follow")
 ```
 
-### VAR Forecast for robbery
+### Robbery
 ```{r seattle robbery VAR}
 # theft from vehicle
 # not significant
