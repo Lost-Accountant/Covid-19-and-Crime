@@ -625,7 +625,7 @@ dygraph(ts_diff_CH)%>%
 
 Most people think Chicago is the most dangerous amongst populated cities in America and even though crime rates have fallen over the years and remained steady – the city's overall crime rate, especially violent crime rate, is higher than the US average.
 
-- The COVID-19 pandemic has severely impacted certain crimes in Chicago ever since Governor J. B. Pritzker issued a disaster proclamation in Illinois on March 9. Theft rates went down significantly in mid-March while crimes like Assault and Vehicle Theft remained steady. The frequency graphs show an increasing trend for most crimes towards the end of May and the first few weeks of June, which we hypothesize is likely due to the riots that caused by George Floyd's death on May 25.
+- The COVID-19 pandemic has severely impacted certain crimes in Chicago ever since Governor J. B. Pritzker issued a disaster proclamation in Illinois on March 9. Theft rates went down significantly in mid-March while crimes like Assault and Vehicle Theft remained steady. The frequency graphs show an increasing trend for most crimes towards the end of May and the first few weeks of June, which we hypothesize is likely due to the riots that were caused by George Floyd's death on May 25.
 
 - Theft, Deceptive Practice, and Battery cases see a noticeable deviation from their respective trend in the past 5 years since March 2020, which we hypothesize are likely due to COVID-19 lockdown measures in Illinois. More serious crimes such as assault and criminal damage showed a steady trend as compared to previous years even during the pandemic which is quite surprising. 
 
