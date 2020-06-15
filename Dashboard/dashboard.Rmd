@@ -1447,9 +1447,13 @@ dygraph(ts_diff_MA) %>%
 ### Summary
 
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+Our analysis shows that except a few crimes, the crime rates in Boston have remained surprisingly stable and consistent even during the COVID-19 pandemic and the model graphs for individual crimes present a glimpse into the future of particular crime rates in this pandemic.
 
+-Boston started implementing shut down measures in March as a response to COVID-19 and since then the only noticeable change in crime rates happened to decrease Property Damage cases while other crime rates remained surprisingly stable and consistent. This makes sense since with people advised to stay at home due to lockdown measures, property damage which requires travelling to other properties is naturally restricted.  The frequency graphs show an increasing trend for crimes like vandalism and investigate person towards the end of May and the first few weeks of June, which we hypothesise is likely due to the riots caused by George Floyd's death on May 25.
 
+-  Property Damage cases show noticeable deviation from their respective trend in the past 5 years since March 2020, which we hypothesise are likely due to COVID-19 lockdown measures in Boston.  Other crimes such as medical cases and verbal disputes are different from historical trends but the sudden change didn’t happen during the pandemic.
+
+- Our graphs in the first row show that, roughly 9 days after a vandalism case, there are on average 100 less COVID-19 patients. This might be due to how a vandalised place naturally deter human gatherings. This relationship is also seen in Providence which is not far from Boston. 6 days after 1 additional confirmed COVID-19 case, there are on average 2.5 more verbal dispute cases in Boston, or for every 2 more patients, we see 5 more verbal dispute cases. This might be also due to community conflict on blaming others on spreading the virus or other issues such as discrimination towards certain racial groups.
 Philadelphia
 =======================================================================
 
@@ -1895,14 +1899,16 @@ dygraph(ts_diff_PA)%>%
 
 
 ### Summary
+Philadelphia consistently ranks above the national average in terms of crime, especially violent offenses. It has the highest violent crime rate of the ten American cities with a population greater than 1 million residents as well as the highest poverty rate among these cities.  Our analysis shows the crime rates in Philadelphia  have remained surprisingly stable and consistent even during the COVID-19 pandemic and the model graphs for individual crimes present a glimpse into the future of particular crime rates in this pandemic.
 
-This is text [link](http://www.example.com)
+-Philadelphia started implementing shut down measures in March as a response to COVID-19 and since then a gradual decrease in thefts and a sharp decline in other offences were noticed.  The gradual decline in theft rates can be due to more and more restrictive stay-at-home policy making it harder to conduct thefts. 
+The frequency graphs show an increasing trend for crimes like vandalism and other crimes towards the end of May and the first few weeks of June, which we hypothesise is likely due to the riots caused by George Floyd's death on May 25.
 
-- one
-- two 
-- three
+-  All other general offences and other general assaults saw noticeable deviation from their respective trends in the past 5 years, although other assault cases had a much smaller deviation which might be simply variation. Another possible explanation for the 2 crimes’ deviation is that the general environment of stay-home policy and social distancing makes committing general crime harder than before.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+- Our graphs in the first row show that, roughly 5 days after an other general offence case, there are on average 22 less Covid-19 patients in Philadelphia. Since the detailed nature of such offences are unknown, it could be a coincidence or simply that the fact of a crime was committed subconsciously deterred social interaction around the place where it happened. Furthermore, 4 days after a theft case, there are on average around 58 more Covid-19 cases. This might be caused by the act of theft involving searching and touching unfamiliar surfaces, which increases the chance of expanding the spread of Covid-19. However, 5 days after, there are 55 less patients on average.  The possible reason behind this opposite effect is beyond our imagination at the moment.
+
+
 
 
 Los Angeles
@@ -2693,7 +2699,7 @@ dygraph(adj_diff_AT) %>%
 
 Atlanta is the capital of the U.S. state of Georgia. Our analysis shows that theft type crime in general saw decrease, both in terms of previous years and in a dynamic manner.
 
-- With covid-19's situation in America becoming severe by mid-March, the city saw a drastic drop in the frequency of larceny cases, which caused it to deviate from past years' trend. 
+- With COVID-19's situation in America becoming severe by mid-March, the city saw a drastic drop in the frequency of larceny cases, which caused it to deviate from past years' trend. 
 
 - Similar situation happened to another 2 theft type crimes: Theft of vehicle (Auto Theft), and robbery cases. Both of them didn't deviate from previous years as much as larceny cases, but they are both their respective lowest point in the past 6 years.
 
