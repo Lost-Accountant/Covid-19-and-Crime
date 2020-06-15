@@ -1474,7 +1474,12 @@ Row{data-height=350}
 #phil2015 <- read.csv('https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2&format=csv&skipfields=cartodb_id,the_geom,the_geom_webmercator&q=SELECT%20*%20,%20ST_Y(the_geom)%20AS%20lat,%20ST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E=%20%272015-01-01%27%20AND%20dispatch_date_time%20%3C%20%272016-01-01%27')
 
 # backup plan, local load
-
+phil2020 <- read.csv("phil_2020.csv")
+phil2019 <- read.csv("phil_2019.csv")
+phil2018 <- read.csv("phil_2018.csv")
+phil2017 <- read.csv("phil_2017.csv")
+phil2016 <- read.csv("phil_2016.csv")
+phil2015 <- read.csv("phil_2015.csv")
 
 phil <- do.call("rbind", list(phil2020, phil2019, phil2018, phil2017, phil2016, phil2015))
 ```
