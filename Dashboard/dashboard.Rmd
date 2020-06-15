@@ -117,7 +117,7 @@ We explore the effect of COVID-19 pandemic on crime rates across different citie
 
 Our goal is to use COVID and Crime data to make future predictions on crime rates in this pandemic. We also look at the crime rates before and after the pandemic to gain insight into how quarantine and self-isolation measures influence human behaviour leading to an increase in specific types of crime.
 
-To learn more about the analysis and a brief overview findings check out our [YouTube Video] (https://youtu.be/GniiB2w3-A8) and click on the city tabs above to explore more !
+To learn more about the analysis and a brief overview of our findings check out our [YouTube Video] (https://youtu.be/GniiB2w3-A8) and click on the individual city tabs above to explore more !
 
 
 -Team KZNS
