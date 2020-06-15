@@ -131,24 +131,6 @@ Our goal is to use COVID and Crime data to make future predictions on crime rate
 
 Click on the location markers on the left to view their analysis !
 
-### Key Results
-
-```{r}
-```
-
-***
-
-Some text desccription
-
-### Coming Soon
-
-```{r}
-```
-
-***
-
-Some text desccription
-
 
   
 Chicago
@@ -2709,15 +2691,13 @@ dygraph(adj_diff_AT) %>%
 
 ### Summary
 
-This is text [link](http://www.example.com)
+Atlanta is the capital of the U.S. state of Georgia. Our analysis shows that theft type crime in general saw decrease, both in terms of previous years and in a dynamic manner.
 
-- one
-- two 
-- three
+- With covid-19's situation in America becoming severe by mid-March, the city saw a drastic drop in the frequency of larceny cases, which caused it to deviate from past years' trend. 
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+- Similar situation happened to another 2 theft type crimes: Theft of vehicle (Auto Theft), and robbery cases. Both of them didn't deviate from previous years as much as larceny cases, but they are both their respective lowest point in the past 6 years.
 
-
+- Our graph in the 1st row also indicates that 1 more covid-19 patient will observe statistically significantly on average 1 less burglary case around 4 days after the test confirmed date. One possible hypothesis could be that the presence of confirmed covid-19 case deters potential illegal entry to the area due to fear of getting infected as well.
 
 
 
