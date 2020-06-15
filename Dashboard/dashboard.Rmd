@@ -1446,6 +1446,9 @@ Our analysis shows that except a few crimes, the crime rates in Boston have rema
 -  Property Damage cases show noticeable deviation from their respective trend in the past 5 years since March 2020, which we hypothesise are likely due to COVID-19 lockdown measures in Boston.  Other crimes such as medical cases and verbal disputes are different from historical trends but the sudden change didn’t happen during the pandemic.
 
 - Our graphs in the first row show that, roughly 9 days after a vandalism case, there are on average 100 less COVID-19 patients. This might be due to how a vandalised place naturally deter human gatherings. This relationship is also seen in Providence which is not far from Boston. 6 days after 1 additional confirmed COVID-19 case, there are on average 2.5 more verbal dispute cases in Boston, or for every 2 more patients, we see 5 more verbal dispute cases. This might be also due to community conflict on blaming others on spreading the virus or other issues such as discrimination towards certain racial groups.
+
+
+
 Philadelphia
 =======================================================================
 
