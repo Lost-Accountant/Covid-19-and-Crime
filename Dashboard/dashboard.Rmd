@@ -623,13 +623,13 @@ dygraph(ts_diff_CH)%>%
 
 ### Summary
 
-This is text [link](http://www.example.com)
+Most people think Chicago is the most dangerous amongst populated cities in America and even though crime rates have fallen over the years and remained steady – the city's overall crime rate, especially violent crime rate, is higher than the US average.
 
-- one
-- two 
-- three
+- The COVID-19 pandemic has severely impacted certain crimes in Chicago ever since Governor J. B. Pritzker issued a disaster proclamation in Illinois on March 9. Theft rates went down significantly in mid-March while crimes like Assault and Vehicle Theft remained steady. The frequency graphs show an increasing trend for most crimes towards the end of May and the first few weeks of June, which we hypothesize is likely due to the riots that caused by George Floyd's death on May 25.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+- Theft, Deceptive Practice, and Battery cases see a noticeable deviation from their respective trend in the past 5 years since March 2020, which we hypothesize are likely due to COVID-19 lockdown measures in Illinois. More serious crimes such as assault and criminal damage showed a steady trend as compared to previous years even during the pandemic which is quite surprising. 
+
+- Our impulse graphs in the first row show that roughly a week after 1 more confirmed COVID-19 case, there are on average 0.01 more criminal damage cases in Chicago, which implies for every 100 more patients, there would be 1 more criminal damage case. This might be due to the result of the increased lockdown measures with increasing cases. 3 days after 1 more confirmed COVID-19 case, the vehicle theft cases decrease by one, on average, which can be due to more people staying indoors with their vehicles parked in safe spots.
 
 Providence
 =======================================================================
