@@ -2328,15 +2328,14 @@ dygraph(ts_diff_LA) %>%
 
 ### Summary
 
-This is text [link](http://www.example.com)
+Los Angeles is the largest city in California, and Crime in Los Angeles has varied throughout time, reaching peaks between the 1970s and 1990s. In 2015, it was revealed that the LAPD had been under-reporting crime for eight years, making the crime rate in the city appear much lower than it really is. Our analysis shows the crime rates in LA  have shown varying trends with some crimes remaining consistent even during the COVID-19 pandemic. The model graphs for individual crimes present a glimpse into the future of particular crime rates in this pandemic.
 
-- one
-- two 
-- three
+- Los Angeles started implementing shut down measures in March as a response to COVID-19 and since then a gradual decrease in aggressive crime such as battery and a sharper decline in other offences like burglary from vehicle and petty theft were noticed.  The gradual decline in theft rates can be due to more and more restrictive stay-at-home policy making it harder to conduct thefts. 
+The frequency graphs show an increasing trend for crimes like burglary towards the end of May and the first few weeks of June, which we hypothesise is likely due to the riots caused by George Floyd's death on May 25.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatr. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+-  Stolen vehicle cases have increased dramatically since March. The number of such cases in April and May have reached the highest amongst the history of 6 years with petty theft cases reaching its lowest point in the past 6 years with a very sharp dive.  This might be due to their vehicles being left unwatched on the streets for long periods of time, making them an easy target for thieves. Furthermore, Burglary cases have shown an overall upward trend. In particular, from April to May, the number of burglary cases has increased significantly. This might be due to some properties remaining empty giving opportunities to the criminals. 
 
-
+- Finally, another interesting and statistically significant result is the dynamic impact on COVID-19 cases due to a new battery case. Our impulse graphs in the first row show that after 3 days of a new battery case, there will be likely an average of 69 less patients of COVID-19 in LA. We have not come up with a reasonable explanation for this since physical contact usually increases the risk of spreading the virus. What is more surprising is that, 2 days after a new burglary case, there are on average 85 less COVID-19 patients, while 7 days after, there are on average 55 more patients than expected. The latter might be caused by touching surfaces while committing burglary which expands the spread of the virus, while the former remains a mystery and surprise to us.
 
 Atlanta
 =======================================================================
@@ -3058,11 +3057,13 @@ dygraph(ts_diff_SEA)%>%
 
 ### Summary
 
-This is text [link](http://www.example.com)
+ Seattle has one of the highest rates of property crime among major U.S. cities with downtown crime increasing at an alarming rate. Our analysis shows the crime rates in Seattle  have shown varying trends with some crimes remaining consistent even during the COVID-19 pandemic. The model graphs for individual crimes present a glimpse into the future of particular crime rates in this pandemic
 
-- one
-- two 
-- three
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+- Seattle started implementing shut down measures in March as a response to COVID-19 and since then a gradual increase in Burglary/Breaking & Entering cases was observed and a sharper decline in other offences like burglary from vehicle and petty theft was noticed.  The frequency graphs show an increasing peaks for  Destruction/Damage/Vandalism of Property towards the end of May and the first few weeks of June, which we hypothesise is likely due to the riots caused by George Floyd's death on May 25.
+
+- The number of Burglary/Breaking & Entering cases have soared since February. In April and May particularly, the number of such cases has reached the highest amongst the history of 6 years. This might be due to many properties remaining empty giving opportunities to the criminals.  Furthermore, simple assault and theft from motor vehicles cases significantly reduced and show an overall downward trend. From March to May,the number of such cases has reached the lowest compared with the same periods in previous 6 years. This might be due to physical assault being naturally restricted and the valuables in motor vehicles being transferred to the owner’s home. 
+
+- Our graphs in the first row show that, roughly 2 days after one additional confirmed case, there’s on average 1.58 more burglary cases; or say, for every 2 more patients there will be roughly 3 more burglary cases in Seattle. This might be due to emptied stores from sick shop owners attracting more illegal entries. However, 5 days after, there are on average 2 less burglary cases with 1 additional patient. We remain inconclusive about the cause of such a relationship but the impact seems significant.
+
 
