@@ -1672,7 +1672,7 @@ irf_offense_1_plot <- ggplot(irf_offense_1_gg, aes(x=lags)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.5) +
   theme_classic() +
   ggtitle("") +
-  xlab("Days after a new Theft case")+
+  xlab("Days after a new Other Offense Case")+
   ylab("COVID-19")+
   theme(text = element_text(size=8), 
         plot.title = element_text(hjust = 0.5))
