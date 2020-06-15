@@ -16,7 +16,7 @@ https://covid19crime.herokuapp.com/
 
 ## Video
 The video is available at 
-https://youtube.com
+https://youtu.be/GniiB2w3-A8
 
 ## Introduction of our project
 This project is to study the social impact of Covid-19 on various crimes, and 7 cities across the US are chosen for the study. 
