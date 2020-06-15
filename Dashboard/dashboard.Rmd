@@ -104,22 +104,10 @@ Location <- c("Providence ","Los Angeles","Chicago","Boston","Seattle","Atlanta"
 lat <- c(41.8240,33.82377,41.78798,42.361145,47.714965,33.753746, 39.952583)
 lng <- c( -71.4128,-118.2668,-87.7738,-71.057083,-122.127166 ,-84.386330,-75.165222)
 df <- data.frame(Location, lat,lng)
- jsCode <- paste0('
- function(el, x) {
-  var marker = document.getElementsByClassName("leaflet-marker-icon leaflet-zoom-animated leaflet-interactive");
-  marker[0].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#providence");};
-  marker[1].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#los-angeles");};
-  marker[2].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#chicago");};
-  marker[3].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#boston");};
-  marker[4].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#seattle");};
-  marker[5].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#atlanta");};
-  marker[6].onclick=function(){window.open("http://individual.utoronto.ca/nayan/datafest.html#philadelphia");};
-}
- ')
+ 
 m <- leaflet() %>%
   addTiles() %>%  # Add default OpenStreetMap map tiles
-  addMarkers(data=df,)%>%
-   onRender(jsCode)
+  addMarkers(data=df,)
 m  # Print the map
 ```
 
@@ -129,7 +117,11 @@ We explore the effect of COVID-19 pandemic on crime rates across different citie
 
 Our goal is to use COVID and Crime data to make future predictions on crime rates in this pandemic. We also look at the crime rates before and after the pandemic to gain insight into how quarantine and self-isolation measures influence human behaviour leading to an increase in specific types of crime.
 
-Click on the location markers on the left to view their analysis !
+To learn more about the analysis and a brief overview findings check out our [YouTube Video] (https://youtu.be/GniiB2w3-A8) and click on the city tabs above to explore more !
+
+
+-Team KZNS
+
 
 
   
