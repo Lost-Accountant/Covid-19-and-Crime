@@ -623,7 +623,7 @@ dygraph(ts_diff_CH)%>%
 
 ### Summary
 
-Most people think Chicago is the most dangerous amongst populated cities in America and even though crime rates have fallen over the years and remained steady – the city's overall crime rate, especially violent crime rate, is higher than the US average.
+Most people think Chicago is the most dangerous amongst populated cities in America and even though crime rates have fallen over the years and remained steady – the city's overall crime rate, especially violent crime rate, is higher than the US average. Our analysis gives us a deeper look at crime in the city and the model graphs for individual crimes present a glimpse into the future of particular crime rates in this pandemic.
 
 - The COVID-19 pandemic has severely impacted certain crimes in Chicago ever since Governor J. B. Pritzker issued a disaster proclamation in Illinois on March 9. Theft rates went down significantly in mid-March while crimes like Assault and Vehicle Theft remained steady. The frequency graphs show an increasing trend for most crimes towards the end of May and the first few weeks of June, which we hypothesize is likely due to the riots that were caused by George Floyd's death on May 25.
 
@@ -1065,14 +1065,13 @@ dygraph(ts_diff_RI) %>%
 
 ### Summary
 
-This is text [link](http://www.example.com)
+Providence is, by far, the largest city in Rhode Island. It has the highest rate of property crime in Rhode Island and has the second-highest rate of violent crime.  Our analysis shows that except for a few crimes, the crime rates in providence have remained surprisingly stable and consistent even during the COVID-19 pandemic and the model graphs for individual crimes present a glimpse into the future of particular crime rates in this pandemic.
 
-- one
-- two 
-- three
+-Rhode Island started implementing shut down measures in March as a response to COVID-19 and since then the only noticeable change in crime rates happened to Missing person cases while other crime rates remained surprisingly stable and consistent. Missing Person cases saw a gradual decrease to almost zero in March. This might be because of shutdown measures and thus less missing persons being reported, but it is also likely to be just normal variation or seasonal trend. The frequency graphs show an increasing trend for crimes like vandalism towards the end of May and the first few weeks of June, which we hypothesize is likely due to the riots caused by George Floyd's death on May 25.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+- Two days after 1 additional COVID-19 case, there is on average 1 more larceny from vehicle case in Providence, while 3 days later there is on average 1 less case. The possible reasons are hard to hypothesize but it is evident that COVID-19 has a significant impact on larceny from vehicle cases. A similar peculiar trend is observed 12 days after a vandalism case – where there are on average 10 fewer COVID-19 confirmed cases observed. This might be due to the nature of vandalized places to naturally deter human gatherings. This interesting relationship is also seen in Boston which is not far from Providence. 
 
+- Finally, another interesting and statistically significant result is the dynamic impact on missing person cases due to a new COVID-19 case. Both positive impact on day 9, 12, and 16, and negative impact on day 4, 7, 11, and 14 is observed. For the closest impact, on day 4, when there are 2 more COVID-19 patients, there are on average 1 less missing person cases. A very crude hypothesis is that missing persons are more likely to be identified once they are infected.
 
 
 Boston
